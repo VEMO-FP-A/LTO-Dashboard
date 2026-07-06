@@ -1362,4 +1362,21 @@ function setupVemoGame(){
   }
   function open(){ overlay.style.display='flex'; drawRoad(); drawPlayer(); }
   function close(){ overlay.style.display='none'; running=false; if(rafId){ cancelAnimationFrame(rafId); rafId=null; } }
-  window.
+  window.startVemoGame = open;
+  document.getElementById('vg-start').addEventListener('click', ()=>{ reset(); loop(); });
+  document.getElementById('vg-close').addEventListener('click', close);
+  document.addEventListener('keydown', e=>{
+    if(overlay.style.display !== 'flex') return;
+    if(e.key==='ArrowLeft' || e.key==='a'){ player.lane=Math.max(0,player.lane-1); player.targetX=LANES_X[player.lane]; }
+    else if(e.key==='ArrowRight' || e.key==='d'){ player.lane=Math.min(2,player.lane+1); player.targetX=LANES_X[player.lane]; }
+    else if(e.key===' '){ e.preventDefault(); paused=!paused; }
+    else if(e.key==='r' || e.key==='R'){ reset(); loop(); }
+    else if(e.key==='Escape'){ close(); }
+  });
+}
+
+if(document.readyState==='loading') document.addEventListener('DOMContentLoaded', boot);
+else boot();
+</script>
+</body>
+</html>
