@@ -484,7 +484,8 @@ function renderKPICards(){
     const B = ki.budKey ? barr(ki.budKey) : null;
     const val = A[CUR];
     const valPrev = CUR>0 ? A[CUR-1] : null;
-    const valBud = B ? B[CUR] : null;
+    let valBud = B ? B[CUR] : null;
+    if(valBud === 0) valBud = null; // budget row is genuinely blank in source Excel for some series (Origination, Net Portfolio, Renewal Rate) -- treat as "n.a." instead of a misleading literal 0 target
 
     const momPct = devPct(val, valPrev);
     const budPct = (valBud!=null) ? devPct(val, valBud) : null;
@@ -1359,13 +1360,4 @@ function setupVemoGame(){
     if(e.key==='ArrowLeft' || e.key==='a'){ player.lane=Math.max(0,player.lane-1); player.targetX=LANES_X[player.lane]; }
     else if(e.key==='ArrowRight' || e.key==='d'){ player.lane=Math.min(2,player.lane+1); player.targetX=LANES_X[player.lane]; }
     else if(e.key===' '){ e.preventDefault(); paused=!paused; }
-    else if(e.key==='r' || e.key==='R'){ reset(); loop(); }
-    else if(e.key==='Escape'){ close(); }
-  });
-}
-
-if(document.readyState==='loading') document.addEventListener('DOMContentLoaded', boot);
-else boot();
-</script>
-</body>
-</html>
+    else if(e.key==='r' || e.key==='R
