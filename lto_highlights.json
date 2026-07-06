@@ -1,0 +1,29 @@
+{
+  "_TEMPLATE_NEW_MONTH": {
+    "_instrucciones": "Copy this block to add a new month. Replace the key with the month (e.g. 'Aug-26'). Write 3-5 highlights and 3-5 lowlights. Body supports numbers, %, $X.Xm, bps.",
+    "highlights": [
+      {
+        "title": "Net Income",
+        "body": "Net Income $X.Xm vs Budget $Y.Ym."
+      },
+      {
+        "title": "Financial Margin",
+        "body": "Financial Margin $X.Xm, +X.X% vs Budget."
+      }
+    ],
+    "lowlights": [
+      {
+        "title": "+61 Days Past Due",
+        "body": "+61 bucket at X.X% of portfolio, above target."
+      },
+      {
+        "title": "Renewal Rate",
+        "body": "Renewal Rate (Board) at XX.X% vs target."
+      }
+    ]
+  },
+  "Jul-26": {
+    "highlights": [],
+    "lowlights": []
+  }
+}
