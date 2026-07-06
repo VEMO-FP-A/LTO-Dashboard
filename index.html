@@ -1,0 +1,1371 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>VEMO Impulso - LTO Executive Dashboard</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700;800&family=Poppins:wght@400;500;600;800&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<style>
+:root{
+  --forest:#1F5454;--teal:#11ABAB;--teal-deep:#168888;--mint:#7BDADA;
+  --red:#C0392B;--green:#117A45;--amber:#E59500;--gold:#FFD84D;
+  --bg:#f5f6f7;--sf:#fff;--b:#e8eaed;
+  --tx:#222;--tx2:#555;--tx3:#888;--rs:6px;--r:10px;
+}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0}
+body{font-family:'Space Grotesk',-apple-system,sans-serif;background:var(--bg);color:var(--tx);padding:18px 26px 60px 50px;position:relative}
+
+.ribbon{position:fixed;left:0;top:0;bottom:0;width:28px;background:var(--forest);display:flex;align-items:flex-start;justify-content:center;padding-top:80px;z-index:5}
+.ribbon span{writing-mode:vertical-rl;transform:rotate(180deg);color:var(--gold);font-size:9px;letter-spacing:0.18em;font-weight:700;text-transform:uppercase}
+
+.header{display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;flex-wrap:wrap;gap:14px;background:linear-gradient(135deg,#173F3F 0%,#1F5454 100%);padding:16px 24px;border-radius:12px}
+.brand-wrap{display:flex;align-items:center;gap:16px}
+.vemo-logo{display:flex;flex-direction:column;line-height:1}
+.vemo-logo .l1{display:flex;align-items:baseline;gap:1px}
+.vemo-logo .vchar{font-family:'Poppins',sans-serif;font-weight:800;font-size:34px;color:var(--gold);letter-spacing:-0.03em;transform:scaleX(0.92) skewX(-3deg);display:inline-block}
+.vemo-logo .emo{font-family:'Poppins',sans-serif;font-weight:800;font-size:34px;color:var(--gold);letter-spacing:-0.02em}
+.vemo-logo .impulso{font-family:'Poppins',sans-serif;font-weight:500;font-size:16px;color:var(--gold);letter-spacing:0.04em;margin-top:-4px;opacity:0.92}
+.brand-tagline{color:#cfe8e8;font-size:11px;letter-spacing:0.03em;border-left:2px solid rgba(255,216,77,0.5);padding-left:14px;line-height:1.5}
+.brand-tagline b{color:#fff}
+.header-right{display:flex;flex-direction:column;align-items:flex-end;gap:4px}
+.build-ts{color:#a9c9c9;font-size:10px;letter-spacing:0.04em}
+.header-site{color:var(--gold);font-size:11px;font-weight:600;letter-spacing:0.03em}
+
+.tab-bar{display:flex;gap:4px;margin-bottom:18px;border-bottom:1px solid var(--b)}
+.tab-bar button{background:transparent;border:none;color:var(--tx2);font-family:inherit;font-weight:600;font-size:12.5px;padding:11px 18px;cursor:pointer;letter-spacing:0.02em;border-bottom:3px solid transparent;margin-bottom:-1px}
+.tab-bar button.active{color:var(--forest);border-bottom-color:var(--gold)}
+.section{display:none}
+.section.active{display:block;animation:fadeIn 0.18s ease}
+@keyframes fadeIn{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
+
+.stabs{display:flex;flex-wrap:wrap;gap:2px;margin-bottom:14px;background:rgba(31,84,84,0.06);border-radius:6px;padding:4px;width:fit-content;border:1px solid rgba(31,84,84,0.10)}
+.stabs button{background:transparent;border:none;color:var(--tx2);font-family:inherit;font-weight:600;font-size:11.5px;padding:7px 14px;cursor:pointer;border-radius:4px;letter-spacing:0.01em}
+.stabs button.active{background:var(--forest);color:#fff}
+.rsub{display:none}
+.rsub.active{display:block}
+
+.vemo-section-title{font-family:'Space Grotesk',sans-serif;font-size:26px;color:var(--forest);font-weight:700;margin:8px 0 14px;letter-spacing:-0.01em;line-height:1.05}
+.vemo-section-title b{color:var(--teal);font-weight:800}
+
+.kpi-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:11px;margin-bottom:24px}
+.kpi-card{background:var(--sf);border:1px solid var(--b);border-radius:10px;padding:13px 15px 14px;position:relative;overflow:hidden;display:flex;flex-direction:column}
+.kpi-card.headline{grid-column:span 2;background:linear-gradient(135deg,#0F3939 0%,#1F5454 100%);color:#fff}
+.kpi-card.headline .kpi-l{color:#bcdcdc}
+.kpi-card.headline .kpi-v{color:#fff;font-size:30px}
+.kpi-card.headline .kpi-mom{color:#dff2f2}
+.kpi-card.headline::before{background:var(--gold)}
+.kpi-spark{margin-top:10px;height:50px;overflow:hidden}
+.kpi-card::before{content:"";position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--teal)}
+.kpi-card.amber::before{background:var(--amber)}
+.kpi-card.red::before{background:var(--red)}
+.kpi-l{font-size:9.5px;font-weight:700;color:var(--tx3);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:6px}
+.kpi-v{font-size:22px;font-weight:700;color:var(--forest);margin-bottom:3px;font-variant-numeric:tabular-nums;line-height:1.05}
+.kpi-mom{font-size:10.5px;color:var(--tx2);display:flex;align-items:center;gap:5px;margin-top:3px}
+.kpi-mom .arr{font-size:9px}
+.kpi-bud{font-size:10.5px;color:var(--tx2);margin-top:9px;padding-top:8px;border-top:1px dashed #ececec;display:flex;justify-content:space-between;align-items:center;gap:6px}
+.kpi-bud .lbl{color:var(--tx3);font-size:9.5px;letter-spacing:0.04em;text-transform:uppercase}
+.kpi-bud .v{font-weight:600;font-variant-numeric:tabular-nums}
+.neg{color:var(--red)}
+.pos{color:var(--green)}
+
+.tbl-scroll{overflow-x:auto;border-radius:8px;border:1px solid var(--b);background:var(--sf)}
+.vemo-tbl{border-collapse:separate;border-spacing:0;width:100%;font-size:11px;font-variant-numeric:tabular-nums;background:#fff}
+.vemo-tbl th,.vemo-tbl td{padding:7px 10px;text-align:center;background:#fff;white-space:nowrap}
+.vemo-tbl thead th{background:var(--teal);color:#fff;font-weight:700;font-size:11px;padding:10px 8px;border-right:2px solid #fff;text-transform:none}
+.vemo-tbl thead th.firstcol{background:var(--teal-deep);text-align:left;padding-left:16px}
+.vemo-tbl thead th.cur{background:var(--mint)}
+.vemo-tbl tbody td{border-bottom:1px solid #ececec;color:#222}
+.vemo-tbl tbody td.lbl{background:var(--teal-deep);color:#fff;font-weight:700;padding-left:16px;text-align:left;min-width:210px}
+.vemo-tbl tbody td.lbl.sub{padding-left:34px;font-weight:500;font-size:11px;background:var(--teal-deep);color:rgba(255,255,255,0.95)}
+.vemo-tbl tbody td.lbl.sub2{padding-left:50px;font-weight:400;font-size:10.5px;background:var(--teal-deep);color:rgba(255,255,255,0.88)}
+.vemo-tbl tbody tr.subtot td{font-weight:700;background:#f2fbfa}
+.vemo-tbl tbody tr.subtot td.lbl{background:var(--forest)}
+.vemo-tbl tbody td.cur{background:#f6fcfc}
+.vemo-tbl tbody td.neg{color:var(--red);font-weight:700}
+.vemo-tbl tbody td.pos{color:var(--green);font-weight:700}
+.vemo-tbl .expand-toggle{cursor:pointer;user-select:none}
+.vemo-tbl .expand-toggle:hover{text-decoration:underline}
+.row-hidden{display:none}
+
+.toggle-row{display:flex;gap:8px;align-items:center;margin-bottom:14px;flex-wrap:wrap}
+.toggle-row label{font-size:11px;color:var(--tx2);display:flex;align-items:center;gap:5px;cursor:pointer;background:#fff;border:1px solid var(--b);padding:6px 12px;border-radius:16px}
+.toggle-row input[type=radio]{accent-color:var(--teal)}
+.toggle-row .grp{display:flex;gap:4px;background:#fff;border:1px solid var(--b);border-radius:16px;padding:3px}
+
+.chart-card{background:var(--sf);border:1px solid var(--b);border-radius:var(--r);padding:16px;margin-bottom:18px}
+.chart-hd{font-size:12.5px;font-weight:700;color:var(--forest);margin-bottom:10px;display:flex;justify-content:space-between;align-items:center}
+.chart-box{height:280px;position:relative}
+.charts-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(420px,1fr));gap:16px}
+
+.hl-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:20px}
+@media (max-width:820px){.hl-grid{grid-template-columns:1fr}}
+.hl-card{background:var(--sf);border:1px solid var(--b);border-radius:var(--r);padding:16px}
+.hl-card .hd{font-weight:700;font-size:13px;margin-bottom:10px;display:flex;align-items:center;gap:8px}
+.hl-card.hl .hd{color:var(--green)}
+.hl-card.ll .hd{color:var(--red)}
+.hl-item{display:flex;gap:8px;margin-bottom:8px;align-items:flex-start;background:#fafdfd;border:1px solid #eef1f1;border-radius:8px;padding:8px 10px}
+.hl-item input.t{font-weight:700;font-size:11.5px;border:none;background:transparent;width:100%;font-family:inherit;color:var(--forest);margin-bottom:2px}
+.hl-item textarea.b{border:none;background:transparent;width:100%;font-family:inherit;font-size:11.5px;color:var(--tx2);resize:vertical;min-height:32px}
+.hl-item .rm{background:none;border:none;color:var(--red);cursor:pointer;font-size:14px;padding:2px 4px}
+.hl-add{background:var(--teal);color:#fff;border:none;border-radius:6px;padding:7px 14px;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit}
+.hl-add:hover{background:var(--teal-deep)}
+
+.bridge-wrap{background:var(--sf);border:1px solid var(--b);border-radius:var(--r);padding:16px;margin:20px 0}
+
+.var-picker{display:flex;gap:10px;align-items:center;margin-bottom:16px;flex-wrap:wrap;background:#fff;border:1px solid var(--b);border-radius:8px;padding:12px}
+.var-picker select{font-family:inherit;font-size:12px;padding:7px 10px;border:1px solid var(--b);border-radius:5px;background:#fff}
+.var-picker .vs{font-weight:800;color:var(--forest)}
+
+footer.foot{margin-top:32px;padding-top:16px;border-top:1px solid var(--b);font-size:10.5px;color:var(--tx3);letter-spacing:0.04em;display:flex;justify-content:space-between;flex-wrap:wrap;gap:6px}
+
+.chat-fab{position:fixed;bottom:24px;right:24px;width:64px;height:64px;background:var(--teal);color:#fff;border-radius:50%;display:flex;align-items:center;justify-content:center;cursor:pointer;box-shadow:0 8px 22px rgba(17,171,171,0.40);z-index:998;transition:transform 0.18s;font-size:26px;border:none}
+.chat-fab:hover{transform:scale(1.06);background:var(--teal-deep)}
+.chat-panel{position:fixed;bottom:96px;right:20px;width:380px;max-width:calc(100vw - 40px);height:520px;max-height:calc(100vh - 120px);background:#fff;border-radius:14px;box-shadow:0 14px 40px rgba(0,0,0,0.22);display:none;flex-direction:column;overflow:hidden;z-index:999;border:1px solid var(--b)}
+.chat-panel.open{display:flex;animation:fadeInUp 0.22s ease}
+@keyframes fadeInUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:none}}
+.chat-panel-hd{background:linear-gradient(135deg,#0F3939 0%,#1F5454 100%);color:#fff;padding:12px 14px;font-weight:700;font-size:13px;display:flex;align-items:center;gap:8px}
+.chat-log{padding:14px;flex:1;overflow-y:auto;display:flex;flex-direction:column;gap:8px;min-height:120px}
+.chat-msg{padding:9px 13px;border-radius:12px;max-width:85%;font-size:12.5px;line-height:1.4;font-family:'Space Grotesk',sans-serif}
+.chat-msg.user{align-self:flex-end;background:var(--teal);color:#fff;border-bottom-right-radius:3px}
+.chat-msg.bot{align-self:flex-start;background:#f0f7f7;color:var(--forest);border-bottom-left-radius:3px;white-space:pre-line}
+.chat-msg .fb{display:flex;gap:8px;margin-top:6px}
+.chat-msg .fb button{background:none;border:none;cursor:pointer;font-size:12px;opacity:0.6}
+.chat-msg .fb button:hover{opacity:1}
+.chat-input-row{display:flex;gap:6px;padding:10px 14px;border-top:1px solid var(--b);background:#fafdfd}
+.chat-input-row input{flex:1;padding:9px 12px;border:1px solid var(--b);border-radius:6px;font-family:inherit;font-size:12px}
+.chat-input-row input:focus{outline:none;border-color:var(--teal)}
+.chat-input-row button{padding:9px 16px;background:var(--teal);color:#fff;border:none;border-radius:6px;cursor:pointer;font-weight:700;font-family:inherit;font-size:12px}
+.chat-hints{padding:8px 14px 12px;display:flex;gap:6px;flex-wrap:wrap;border-top:1px solid #f0f0f0;background:#fafdfd;max-height:70px;overflow-y:auto}
+.chat-hint{padding:4px 10px;background:#fff;border:1px solid var(--b);border-radius:12px;cursor:pointer;font-size:10.5px;color:var(--tx2);font-family:inherit}
+.chat-hint:hover{background:var(--teal);color:#fff;border-color:var(--teal)}
+
+#vemo-game-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.88);z-index:9000;align-items:center;justify-content:center;flex-direction:column;font-family:'Space Grotesk',sans-serif}
+</style>
+</head>
+<body>
+<div class="ribbon"><span>VEMO IMPULSO · LTO</span></div>
+
+<div id="vemo-game-overlay">
+  <div style="display:flex;gap:20px;align-items:flex-start">
+    <canvas id="vemo-game-canvas" width="320" height="500" style="background:#1a2a2a;border:3px solid #11ABAB;border-radius:10px;display:block"></canvas>
+    <div style="color:#fff;font-size:13px;width:200px">
+      <div style="font-size:20px;font-weight:800;color:#FFD84D;margin-bottom:8px">VEMO RACE</div>
+      <div style="color:#9aa3ac;margin-bottom:14px">Dodge the cars. Switch lanes.</div>
+      <div style="margin-bottom:10px"><b>Score:</b> <span id="vg-score" style="color:#7BDADA;font-size:18px;font-weight:800">0</span></div>
+      <div style="margin-bottom:10px"><b>Best:</b> <span id="vg-best" style="color:#5dd39e;font-weight:700">0</span></div>
+      <div style="margin-bottom:10px"><b>Speed:</b> <span id="vg-speed" style="color:#ff7676;font-weight:700">1x</span></div>
+      <hr style="border-color:#353c42;margin:14px 0">
+      <div style="font-size:11px;color:#b8c1c8;line-height:1.5">
+        <div>&larr; / A - Left lane</div>
+        <div>&rarr; / D - Right lane</div>
+        <div>Space - Pause</div>
+        <div>R - Restart</div>
+      </div>
+      <button id="vg-start" style="margin-top:18px;padding:10px 20px;background:#11ABAB;color:#fff;border:none;border-radius:6px;cursor:pointer;font-weight:700;font-family:inherit;font-size:13px;width:100%">Start / Restart</button>
+      <button id="vg-close" style="margin-top:8px;padding:8px 20px;background:transparent;color:#ff7676;border:1px solid #ff7676;border-radius:6px;cursor:pointer;font-family:inherit;font-size:12px;width:100%">Close (Esc)</button>
+    </div>
+  </div>
+</div>
+
+<div class="header">
+  <div class="brand-wrap">
+    <div class="vemo-logo">
+      <div class="l1"><span class="vchar">V</span><span class="emo">emo</span></div>
+      <div class="impulso">Impulso</div>
+    </div>
+    <div class="brand-tagline"><b>De chofer a dueño</b><br>Renta Uber &amp; DiDi sin enganche</div>
+  </div>
+  <div class="header-right">
+    <div class="header-site">vemoimpulso.mx</div>
+    <div class="build-ts">Built <span id="build-ts-val">--</span></div>
+  </div>
+</div>
+
+<div class="tab-bar">
+  <button class="tab-btn active" data-tab="exec">Executive Summary</button>
+  <button class="tab-btn" data-tab="ops">Operational Metrics</button>
+  <button class="tab-btn" data-tab="pnl">P&amp;L</button>
+  <button class="tab-btn" data-tab="var">Variation</button>
+</div>
+
+<!-- ============ TAB 1: EXECUTIVE SUMMARY ============ -->
+<div class="section active" id="tab-exec">
+  <div class="vemo-section-title">Executive <b>Summary</b></div>
+  <div class="kpi-grid" id="kpi-cards-grid"></div>
+
+  <div class="vemo-section-title" style="font-size:20px">P&amp;L <b>Summary</b> (Managerial)</div>
+  <div class="toggle-row">
+    <div class="grp">
+      <label><input type="radio" name="pl-summary-range" value="6" checked> Last 6M</label>
+      <label><input type="radio" name="pl-summary-range" value="12"> Last 12M</label>
+    </div>
+  </div>
+  <div class="tbl-scroll"><table class="vemo-tbl" id="pl-summary-table"></table></div>
+
+  <div class="hl-grid">
+    <div class="hl-card hl">
+      <div class="hd">Highlights</div>
+      <div id="hl-list"></div>
+      <button class="hl-add" data-kind="highlights">+ Add Highlight</button>
+    </div>
+    <div class="hl-card ll">
+      <div class="hd">Lowlights</div>
+      <div id="ll-list"></div>
+      <button class="hl-add" data-kind="lowlights">+ Add Lowlight</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============ TAB 2: OPERATIONAL METRICS ============ -->
+<div class="section" id="tab-ops">
+  <div class="vemo-section-title">Operational <b>Metrics</b></div>
+  <div class="toggle-row">
+    <div class="grp">
+      <label><input type="radio" name="ops-range" value="ytd" checked> YTD</label>
+      <label><input type="radio" name="ops-range" value="hist"> Historic (24M)</label>
+    </div>
+  </div>
+  <div class="charts-grid">
+    <div class="chart-card"><div class="chart-hd">Origination (MXNm)</div><div class="chart-box"><canvas id="chart-origination"></canvas></div></div>
+    <div class="chart-card"><div class="chart-hd">Portfolio $ — Gross vs Net (MXNm)</div><div class="chart-box"><canvas id="chart-portfolio"></canvas></div></div>
+    <div class="chart-card"><div class="chart-hd">Active Units</div><div class="chart-box"><canvas id="chart-active-units"></canvas></div></div>
+    <div class="chart-card"><div class="chart-hd">Buckets (% of Portfolio)</div><div class="chart-box"><canvas id="chart-buckets"></canvas></div></div>
+    <div class="chart-card"><div class="chart-hd">Renewal Rate (Board vs Mgmt)</div><div class="chart-box"><canvas id="chart-renewal"></canvas></div></div>
+    <div class="chart-card"><div class="chart-hd">Repossessed Units</div><div class="chart-box"><canvas id="chart-repo"></canvas></div></div>
+    <div class="chart-card"><div class="chart-hd">Headcount</div><div class="chart-box"><canvas id="chart-headcount"></canvas></div></div>
+  </div>
+</div>
+
+<!-- ============ TAB 3: P&L ============ -->
+<div class="section" id="tab-pnl">
+  <div class="vemo-section-title">P&amp;L</div>
+  <div class="toggle-row">
+    <div class="grp">
+      <label><input type="radio" name="pl-view" value="managerial" checked> Managerial</label>
+      <label><input type="radio" name="pl-view" value="accounting"> Accounting</label>
+    </div>
+  </div>
+  <div class="tbl-scroll" id="pl-managerial-wrap"><table class="vemo-tbl" id="pl-full-table"></table></div>
+  <div class="tbl-scroll" id="pl-accounting-wrap" style="display:none;margin-top:14px"><table class="vemo-tbl" id="pl-recon-table"></table></div>
+
+  <div class="bridge-wrap">
+    <div class="vemo-section-title" style="font-size:19px">Net Income vs Budget <b>Bridge</b></div>
+    <div class="toggle-row">
+      <div class="grp">
+        <label><input type="radio" name="bridge-mode" value="cur" checked> Current Month</label>
+        <label><input type="radio" name="bridge-mode" value="ytd"> YTD</label>
+      </div>
+    </div>
+    <div class="chart-box" style="height:340px"><canvas id="ni-bridge-chart"></canvas></div>
+  </div>
+</div>
+
+<!-- ============ TAB 4: VARIATION ============ -->
+<div class="section" id="tab-var">
+  <div class="vemo-section-title">Month-over-Month <b>Comparator</b></div>
+  <div class="var-picker">
+    <label>Month A</label><select id="var-month-a"></select>
+    <span class="vs">vs</span>
+    <label>Month B</label><select id="var-month-b"></select>
+  </div>
+  <div class="tbl-scroll"><table class="vemo-tbl" id="var-delta-table"></table></div>
+
+  <div class="vemo-section-title" style="margin-top:28px">Custom <b>KPI Builder</b></div>
+  <div class="var-picker">
+    <label>Series A</label><select id="kpi-builder-a"></select>
+    <label>Series B</label><select id="kpi-builder-b"></select>
+    <label>Range</label>
+    <select id="kpi-builder-range">
+      <option value="ytd">YTD</option>
+      <option value="hist" selected>Historic (24M)</option>
+    </select>
+  </div>
+  <div class="chart-card"><div class="chart-box" style="height:320px"><canvas id="kpi-builder-chart"></canvas></div></div>
+</div>
+
+<footer class="foot">
+  <span>VEMO Impulso &middot; LTO Executive Dashboard &middot; Lease-to-Own financing for Uber &amp; DiDi drivers</span>
+  <span>vemoimpulso.mx</span>
+</footer>
+
+<button class="chat-fab" id="chat-fab" title="VEMIA - VEMO Impulso Assistant">&#128663;</button>
+<div class="chat-panel" id="chat-panel">
+  <div class="chat-panel-hd">
+    <span>&#128663; <b>VEMIA</b> &middot; Your VEMO Impulso Assistant</span>
+    <span style="margin-left:auto;display:flex;gap:6px">
+      <button id="chat-clear" title="Clear conversation" style="background:none;border:none;color:#fff;cursor:pointer;font-size:14px;padding:2px 6px">&#128465;</button>
+      <button id="chat-close" title="Close" style="background:none;border:none;color:#fff;cursor:pointer;font-size:14px;padding:2px 6px">&times;</button>
+    </span>
+  </div>
+  <div id="chat-log" class="chat-log"></div>
+  <div class="chat-input-row">
+    <input id="chat-input" type="text" placeholder="Ask me anything..." autocomplete="off" />
+    <button id="chat-send">Send</button>
+  </div>
+  <div class="chat-hints">
+    <button class="chat-hint" data-q="what is vemo impulso">What is LTO?</button>
+    <button class="chat-hint" data-q="executive summary">Executive Summary</button>
+    <button class="chat-hint" data-q="net income bridge">NI Bridge</button>
+    <button class="chat-hint" data-q="glossary">Glossary</button>
+    <button class="chat-hint" data-q="fun fact">Fun Fact</button>
+    <button class="chat-hint" data-q="play game">Play Game</button>
+    <button class="chat-hint" data-q="who leads this">Who leads this?</button>
+    <button class="chat-hint" data-q="help">Help</button>
+  </div>
+</div>
+<script>
+let D = null, BUD = null, MONTHS = [], LI = -1; // LI = last actual index into 2026 half (0-based)
+let HL = {highlights:[], lowlights:[]};
+let CUR = -1; // absolute index 0..23 of the current/last actual month
+const YTD_START_2026 = 12; // Jan-26 absolute index
+
+const fmtInt = v => (v==null||isNaN(v)) ? '—' : Math.round(v).toLocaleString();
+const fmtMm = v => (v==null||isNaN(v)) ? '—' : v.toLocaleString(undefined,{minimumFractionDigits:1,maximumFractionDigits:1});
+const fmtPct = (v,d) => (v==null||isNaN(v)) ? '—' : (v*100).toFixed(d==null?1:d)+'%';
+const fmtPctRaw = (v,d) => (v==null||isNaN(v)) ? '—' : v.toFixed(d==null?1:d)+'%'; // v already *100
+const fmtBps = v => (v==null||isNaN(v)) ? '—' : (v>=0?'+':'')+Math.round(v)+' bps';
+
+function arr(key){
+  const f = D.fin[key];
+  if(!f) return new Array(24).fill(0);
+  return f.a25.concat(f.a26);
+}
+function barr(key){
+  const b = D.bud[key];
+  if(!b) return null;
+  // budget is Jan-Dec 2026 only (12 months); align into 24-slot array (0 for 2025 half)
+  return new Array(12).fill(null).concat(b);
+}
+function sum(a, s, e){ let t=0; for(let i=s;i<=e;i++){ const v=a[i]; if(v!=null && !isNaN(v)) t+=v; } return t; }
+function avg(a, s, e){ let t=0,n=0; for(let i=s;i<=e;i++){ const v=a[i]; if(v!=null && !isNaN(v)){ t+=v; n++; } } return n? t/n : null; }
+function last(a, idx){ return a[idx]; }
+function mlbl(i){ return MONTHS[i] || ''; }
+function mlblShort(i){ return MONTHS[i] || ''; }
+
+async function boot(){
+  const res = await fetch('lto_data.json');
+  D = await res.json();
+  MONTHS = D.months;
+  LI = D.last_actual_idx;
+  CUR = 12 + LI; // absolute index of last actual month
+  document.getElementById('build-ts-val').textContent = D.generated || '';
+
+  try {
+    const hres = await fetch('lto_highlights.json');
+    window.__HL_TEMPLATE = await hres.json();
+  } catch(e){ window.__HL_TEMPLATE = {}; }
+  loadHighlights();
+
+  renderKPICards();
+  renderPLSummary();
+  renderHighlights();
+  renderPLFull();
+  renderPLRecon();
+  renderNIBridge();
+  initOpsCharts();
+  initVariationTab();
+  initChatbot();
+  setupVemoGame();
+  wireTabs();
+  wireToggles();
+}
+
+function wireTabs(){
+  document.querySelectorAll('.tab-btn').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+      document.querySelectorAll('.section').forEach(s=>s.classList.remove('active'));
+      btn.classList.add('active');
+      document.getElementById('tab-'+btn.dataset.tab).classList.add('active');
+    });
+  });
+}
+
+function wireToggles(){
+  document.querySelectorAll('input[name="pl-summary-range"]').forEach(r=>r.addEventListener('change', renderPLSummary));
+  document.querySelectorAll('input[name="ops-range"]').forEach(r=>r.addEventListener('change', renderAllOpsCharts));
+  document.querySelectorAll('input[name="pl-view"]').forEach(r=>r.addEventListener('change', ()=>{
+    const v = document.querySelector('input[name="pl-view"]:checked').value;
+    document.getElementById('pl-managerial-wrap').style.display = v==='managerial' ? '' : 'none';
+    document.getElementById('pl-accounting-wrap').style.display = v==='accounting' ? '' : 'none';
+  }));
+  document.querySelectorAll('input[name="bridge-mode"]').forEach(r=>r.addEventListener('change', renderNIBridge));
+}
+</script>
+<script>
+const KPI13 = [
+  {l:'Net Portfolio (Board)', key:'net_portfolio_board', unit:'mxnm', better:'up', budKey:'net_portfolio_board'},
+  {l:'Origination', key:'origination_total', unit:'mxnm', better:'up', budKey:'origination_total'},
+  {l:'Active Units', key:'active_units', unit:'count', better:'up', budKey:'active_units'},
+  {l:'Collection Rate', key:'collection_rate', unit:'pct', better:'up', budKey:'collection_rate'},
+  {l:'+61 Days Past Due', key:'bucket_61plus', unit:'pct', better:'down', budKey:null},
+  {l:'Renewal Rate (Board)', key:'renewal_rate_board', unit:'pct', better:'up', budKey:'renewal_rate_board'},
+  {l:'Repossessed Units (EoP)', key:'repossessed_units_eop', unit:'count', better:'down', budKey:null},
+  {l:'Nominal Interest Rate YTD', key:'nominal_interest_rate_ytd', unit:'pct', better:'up', budKey:null},
+  {l:'Net Interest Margin (Ann.)', key:'nim_annualized', unit:'pct', better:'up', budKey:null},
+  {l:'Financial Margin', key:'financial_margin', unit:'mxnm', better:'up', budKey:'financial_margin'},
+  {l:'Total SG&A', key:'total_sga', unit:'mxnm', better:'down', budKey:'total_sga'},
+  {l:'EBT', key:'ebt', unit:'mxnm', better:'up', budKey:'ebt'},
+  {l:'Net Income', key:'net_income', unit:'mxnm', better:'up', budKey:'net_income', headline:true},
+];
+
+function fmtVal(v, unit){
+  if(v==null || isNaN(v)) return '—';
+  if(unit==='pct') return fmtPct(v,1);
+  if(unit==='count') return fmtInt(v);
+  return fmtMm(v);
+}
+function devPct(a,b){ if(b==null||isNaN(b)||b===0) return null; return (a-b)/Math.abs(b)*100; }
+function devBps(a,b){ if(a==null||b==null||isNaN(a)||isNaN(b)) return null; return (a-b)*10000; }
+
+function _kpiSparkline(series, budgetSeries, w, h){
+  w = w || 260; h = h || 50;
+  const vals = series.filter(v => v != null && !isNaN(v));
+  if(!vals.length) return '';
+  const mn = Math.min(...vals), mx = Math.max(...vals);
+  const range = mx - mn || 1;
+  const n = series.length;
+  const stepX = n > 1 ? w / (n - 1) : w;
+  function y(v){ return h - ((v - mn) / range) * (h - 6) - 3; }
+  let path = 'M0,' + h + ' ';
+  for(let i=0; i<n; i++){
+    const v = series[i]; if(v == null || isNaN(v)) continue;
+    path += 'L' + (i*stepX).toFixed(1) + ',' + y(v).toFixed(1) + ' ';
+  }
+  path += 'L' + w + ',' + h + ' Z';
+  let linePath = '', started = false;
+  for(let i=0; i<n; i++){
+    const v = series[i]; if(v == null || isNaN(v)) continue;
+    linePath += (started ? 'L' : 'M') + (i*stepX).toFixed(1) + ',' + y(v).toFixed(1) + ' ';
+    started = true;
+  }
+  let budgetPath = '';
+  if(budgetSeries && budgetSeries.length){
+    let bs = false;
+    for(let i=0; i<n; i++){
+      const bv = budgetSeries[i]; if(bv == null || isNaN(bv)) continue;
+      budgetPath += (bs ? 'L' : 'M') + (i*stepX).toFixed(1) + ',' + y(bv).toFixed(1) + ' ';
+      bs = true;
+    }
+  }
+  const gid = 'spg' + Math.random().toString(36).slice(2,8);
+  return '<svg viewBox="0 0 ' + w + ' ' + h + '" preserveAspectRatio="none" style="display:block;width:100%;height:100%">' +
+    '<defs><linearGradient id="'+gid+'" x1="0" y1="0" x2="0" y2="1">' +
+    '<stop offset="0%" stop-color="#11ABAB" stop-opacity="0.30"/>' +
+    '<stop offset="100%" stop-color="#11ABAB" stop-opacity="0.03"/>' +
+    '</linearGradient></defs>' +
+    '<path d="' + path + '" fill="url(#'+gid+')" stroke="none"/>' +
+    '<path d="' + linePath + '" fill="none" stroke="#11ABAB" stroke-width="1.8"/>' +
+    (budgetPath ? '<path d="' + budgetPath + '" fill="none" stroke="#1F5454" stroke-width="1.2" stroke-dasharray="3,2" opacity="0.7"/>' : '') +
+    '</svg>';
+}
+
+function fmtRangeShort(v, unit){
+  if(v == null || isNaN(v)) return '';
+  if(unit === 'pct') return (v*100).toFixed(0) + '%';
+  const a = Math.abs(v);
+  if(unit === 'mxnm'){
+    if(a >= 1000) return (v/1000).toFixed(1)+'B';
+    return v.toFixed(0);
+  }
+  if(a >= 1e6) return (v/1e6).toFixed(1)+'M';
+  if(a >= 1e3) return (v/1e3).toFixed(1)+'k';
+  return Math.round(v).toString();
+}
+
+function renderKPICards(){
+  const el = document.getElementById('kpi-cards-grid');
+  el.innerHTML = KPI13.map(ki=>{
+    const A = arr(ki.key);
+    const B = ki.budKey ? barr(ki.budKey) : null;
+    const val = A[CUR];
+    const valPrev = CUR>0 ? A[CUR-1] : null;
+    const valBud = B ? B[CUR] : null;
+
+    const momPct = devPct(val, valPrev);
+    const budPct = (valBud!=null) ? devPct(val, valBud) : null;
+    const momBps = ki.unit==='pct' ? devBps(val, valPrev) : null;
+    const budBps = ki.unit==='pct' ? devBps(val, valBud) : null;
+
+    function isNegBetter(p){ if(p==null) return false; return ki.better==='up' ? p<0 : p>0; }
+    const momTxt = momPct==null ? '—' : (ki.unit==='pct' ? fmtBps(momBps) : (momPct>=0?'+':'')+momPct.toFixed(1)+'%');
+    const budTxt = budPct==null ? 'n.a.' : (ki.unit==='pct' ? fmtBps(budBps) : (budPct>=0?'+':'')+budPct.toFixed(1)+'%');
+    const momCls = isNegBetter(momPct) ? 'neg' : 'pos';
+    const budCls = isNegBetter(budPct) ? 'neg' : 'pos';
+    const arrSym = momPct==null ? '' : (momPct>=0 ? '▲' : '▼');
+    const cardCls = isNegBetter(momPct) ? 'amber' : '';
+
+    const spSeries = A.slice(0, CUR+1);
+    const spBudget = B ? B.slice(0, CUR+1) : null;
+    const sparkline = _kpiSparkline(spSeries, spBudget, 260, 50);
+    const spVals = spSeries.filter(v=>v!=null && !isNaN(v));
+    let rangeTxt = '';
+    if(spVals.length){
+      const mn = Math.min(...spVals), mx = Math.max(...spVals);
+      rangeTxt = fmtRangeShort(mn, ki.unit) + ' – ' + fmtRangeShort(mx, ki.unit);
+    }
+    const dateRangeTxt = mlblShort(0) + ' – ' + mlblShort(CUR);
+    const sparkFooter = '<div style="display:flex;justify-content:space-between;font-size:9.5px;color:'+(ki.headline?'#bcdcdc':'var(--tx3)')+';margin-top:4px;padding:0 2px">' +
+      '<span>' + rangeTxt + '</span><span>' + dateRangeTxt + '</span></div>';
+
+    const displayVal = (ki.unit==='mxnm' && ki.better==='down' && val>0) ? -val : val;
+
+    return '<div class="kpi-card '+cardCls+(ki.headline?' headline':'')+'">'+
+      '<div class="kpi-l">'+ki.l+'</div>'+
+      '<div class="kpi-v">'+fmtVal(displayVal, ki.unit)+'</div>'+
+      '<div class="kpi-mom"><span class="arr '+momCls+'">'+arrSym+'</span> <span class="'+momCls+'">'+momTxt+'</span> <span style="opacity:0.7">vs '+mlblShort(CUR-1)+'</span></div>'+
+      (ki.budKey && valBud!=null ?
+        '<div class="kpi-bud"><span><span class="lbl">vs Budget</span> '+fmtVal(valBud, ki.unit)+'</span><span class="v '+budCls+'">'+budTxt+'</span></div>'
+        : '<div class="kpi-bud"><span class="lbl">Budget</span><span class="v" style="opacity:0.6">n.a.</span></div>')+
+      '<div class="kpi-spark">'+sparkline+'</div>'+
+      sparkFooter+
+    '</div>';
+  }).join('');
+}
+</script>
+<script>
+// P&L Managerial hierarchy
+const PL_HIER = [
+  {k:'interest_income', l:'Interest Income'},
+  {k:'interest_expense', l:'Interest Expense', invert:true},
+  {k:'financial_margin', l:'Financial Margin', subtotal:true},
+  {k:'llr_rpsd', l:'Losses / LLR & RPSD', invert:true, children:[
+    {k:'delta_reserve', l:'Delta Reserve'},
+    {k:'reversal_rpsd', l:'Reversal RPSD'},
+    {k:'incremental_loss', l:'Incremental Loss on Reoriginated Vehicles'},
+  ]},
+  {k:'adj_financial_margin', l:'Adjusted Financial Margin', subtotal:true},
+  {k:'other_operating_revenue', l:'Other Operating Revenue', children:[
+    {k:'admin_fees', l:'Administration Fees'},
+    {k:'udi', l:'UDI (Insurance Rebate)'},
+    {k:'vehicle_rebate', l:'Vehicle Rebate'},
+    {k:'gps_rebate', l:'GPS Rebate'},
+    {k:'uber_bonus', l:'Uber Bonus'},
+    {k:'didi_bonus', l:'Didi Bonus'},
+    {k:'opening_fees', l:'Opening Fees'},
+    {k:'purchase_option', l:'Purchase Option'},
+    {k:'substitute_income', l:'Substitute Units Income'},
+    {k:'other_op_rev_others', l:'Others'},
+  ]},
+  {k:'net_operating_revenue', l:'Net Operating Revenue', subtotal:true},
+  {k:'cogs', l:'COGS', invert:true, children:[
+    {k:'maintenance', l:'Maintenance'},
+    {k:'towing', l:'Towing'},
+    {k:'vehicle_admin_exp', l:'Vehicle Administrative Expenses'},
+    {k:'telematics', l:'Telematics'},
+    {k:'secondary_sales', l:'Gain / (Loss) from Secondary Sales'},
+  ]},
+  {k:'payroll_expense', l:'Payroll Expense', invert:true, children:[
+    {k:'wages', l:'Wages'},
+    {k:'benefits', l:'Benefits'},
+    {k:'bonus', l:'Bonus'},
+    {k:'severance', l:'Severance'},
+  ]},
+  {k:'total_sga', l:'Total SG&A', invert:true, subtotal:true},
+  {k:'non_operating', l:'Non Operating Revenue / (Expense)'},
+  {k:'da', l:'D&A', invert:true},
+  {k:'ebt', l:'EBT', subtotal:true},
+  {k:'ptu', l:'PTU', invert:true},
+  {k:'taxes', l:'Taxes', invert:true},
+  {k:'net_income', l:'Net Income', subtotal:true},
+];
+
+const RECON_HIER = [
+  {k:'recon_net_income', l:'Net Income (Managerial)'},
+  {k:'recon_cf_sga', l:'Cross Functional SG&A adj.'},
+  {k:'recon_corp_ga_total', l:'Corporate G&A adj.'},
+  {k:'recon_intercompany', l:'Intercompany Eliminations'},
+  {k:'recon_fx', l:'FX'},
+  {k:'accounting_net_income', l:'Accounting Net Income', subtotal:true},
+];
+
+function cellCls(v, invert){
+  if(v==null || isNaN(v) || v===0) return '';
+  const nv = invert ? -v : v;
+  return nv < 0 ? 'neg' : 'pos';
+}
+
+function flattenPL(hier, depth){
+  depth = depth || 0;
+  let out = [];
+  hier.forEach(node=>{
+    out.push(Object.assign({depth}, node));
+    if(node.children) out = out.concat(flattenPL(node.children, depth+1));
+  });
+  return out;
+}
+
+function renderPLSummary(){
+  const range = parseInt((document.querySelector('input[name="pl-summary-range"]:checked')||{value:6}).value);
+  const startIdx = Math.max(0, CUR - range + 1);
+  const cols = [];
+  for(let i=startIdx;i<=CUR;i++) cols.push(i);
+  const ytdSum = (key)=> sum(arr(key), YTD_START_2026, CUR);
+
+  const rows = flattenPL(PL_HIER);
+  let thead = '<thead><tr><th class="firstcol">P&amp;L (MXNm)</th>' + cols.map(i=>'<th'+(i===CUR?' class="cur"':'')+'>'+mlbl(i)+'</th>').join('') + '<th class="cur">YTD</th></tr></thead>';
+  let tbody = '<tbody>';
+  rows.forEach(r=>{
+    const A = arr(r.k);
+    const lblCls = 'lbl' + (r.depth>0?' sub':'');
+    const trCls = r.subtotal ? 'subtot' : '';
+    tbody += '<tr class="'+trCls+'"><td class="'+lblCls+'">'+r.l+'</td>';
+    cols.forEach(i=>{
+      const v = A[i];
+      const cls = (cellCls(v, r.invert)) + (i===CUR?' cur':'');
+      tbody += '<td class="'+cls.trim()+'">'+fmtMm(v)+'</td>';
+    });
+    const ytdV = ytdSum(r.k);
+    tbody += '<td class="cur '+cellCls(ytdV,r.invert)+'">'+fmtMm(ytdV)+'</td></tr>';
+  });
+  tbody += '</tbody>';
+  document.getElementById('pl-summary-table').innerHTML = thead + tbody;
+}
+
+function renderPLFull(){
+  const rows = flattenPL(PL_HIER);
+  const B = key => barr(key);
+  const ytdSum = (key)=> sum(arr(key), YTD_START_2026, CUR);
+  const ytdBudSum = (key)=> { const b=B(key); return b? sum(b, YTD_START_2026, CUR) : null; };
+
+  let thead = '<thead><tr><th class="firstcol">P&amp;L Managerial (MXNm)</th><th class="cur">'+mlbl(CUR)+' Act.</th><th>'+mlbl(CUR)+' Bud.</th><th class="cur">YTD Act.</th><th>YTD Bud.</th></tr></thead>';
+  let tbody = '<tbody>';
+  rows.forEach((r,idx)=>{
+    const A = arr(r.k);
+    const b = B(r.k);
+    const actCur = A[CUR];
+    const budCur = b ? b[CUR] : null;
+    const actYtd = ytdSum(r.k);
+    const budYtd = ytdBudSum(r.k);
+    const lblCls = 'lbl' + (r.depth===1?' sub':'') + (r.depth>=2?' sub2':'');
+    const trCls = (r.subtotal?'subtot ':'') + (r.children?'expand-toggle':'');
+    const rowId = 'pl-row-'+idx;
+    const hasChildren = !!r.children;
+    tbody += '<tr class="'+trCls+'"'+(hasChildren?' data-toggle="grp-'+r.k+'"':'')+'>';
+    tbody += '<td class="'+lblCls+'">'+(hasChildren?'▸ ':'')+r.l+'</td>';
+    tbody += '<td class="cur '+cellCls(actCur,r.invert)+'">'+fmtMm(actCur)+'</td>';
+    tbody += '<td class="'+cellCls(budCur,r.invert)+'">'+fmtMm(budCur)+'</td>';
+    tbody += '<td class="cur '+cellCls(actYtd,r.invert)+'">'+fmtMm(actYtd)+'</td>';
+    tbody += '<td class="'+cellCls(budYtd,r.invert)+'">'+fmtMm(budYtd)+'</td>';
+    tbody += '</tr>';
+  });
+  tbody += '</tbody>';
+  document.getElementById('pl-full-table').innerHTML = thead + tbody;
+
+  // Wire expand/collapse for children rows (identified by depth run following a parent)
+  const trs = Array.from(document.querySelectorAll('#pl-full-table tbody tr'));
+  let openGroups = {};
+  trs.forEach((tr,i)=>{
+    const r = rows[i];
+    if(r.children){
+      tr.style.cursor='pointer';
+      tr.addEventListener('click', ()=>{
+        openGroups[r.k] = !openGroups[r.k];
+        let j=i+1;
+        while(j<rows.length && rows[j].depth>r.depth){
+          trs[j].style.display = openGroups[r.k] ? '' : 'none';
+          j++;
+        }
+        tr.querySelector('td.lbl, td.lbl.sub, td.lbl.sub2').textContent = (openGroups[r.k]?'▾ ':'▸ ')+r.l;
+      });
+      // collapse initially
+      let j=i+1;
+      while(j<rows.length && rows[j].depth>r.depth){ trs[j].style.display='none'; j++; }
+    }
+  });
+}
+
+function renderPLRecon(){
+  const B = key => barr(key);
+  let thead = '<thead><tr><th class="firstcol">Accounting Reconciliation (MXNm)</th><th class="cur">'+mlbl(CUR)+'</th><th class="cur">YTD</th></tr></thead>';
+  let tbody = '<tbody>';
+  RECON_HIER.forEach(r=>{
+    const A = arr(r.k);
+    const actCur = A[CUR];
+    const actYtd = sum(A, YTD_START_2026, CUR);
+    const trCls = r.subtotal ? 'subtot' : '';
+    tbody += '<tr class="'+trCls+'"><td class="lbl">'+r.l+'</td>';
+    tbody += '<td class="cur '+cellCls(actCur,false)+'">'+fmtMm(actCur)+'</td>';
+    tbody += '<td class="cur '+cellCls(actYtd,false)+'">'+fmtMm(actYtd)+'</td></tr>';
+  });
+  tbody += '</tbody>';
+  document.getElementById('pl-recon-table').innerHTML = thead + tbody;
+}
+</script>
+<script>
+let __NI_BRIDGE_CHART = null;
+
+function renderNIBridge(){
+  const ctx = document.getElementById('ni-bridge-chart');
+  if(!ctx) return;
+  const mode = (document.querySelector('input[name="bridge-mode"]:checked')||{value:'cur'}).value;
+  const isYTD = mode === 'ytd';
+  const s = isYTD ? YTD_START_2026 : CUR;
+  const e = CUR;
+
+  function sA(k){ return sum(arr(k), s, e); }
+  function sB(k){ const b=barr(k); return b ? sum(b, s, e) : 0; }
+
+  const niBud = sB('net_income');
+  const niAct = sA('net_income');
+
+  // Revenue-type: positive = actual > budget improves NI
+  function varRev(k){ return sA(k) - sB(k); }
+  // Cost-type: positive = actual cost lower (less negative / smaller magnitude) than budget improves NI.
+  // Since cost lines are stored as negative MXNm, (actual - budget) directly gives the NI impact:
+  // if actual is less negative than budget, (actual - budget) > 0 -> favorable.
+  function varCost(k){ return sA(k) - sB(k); }
+
+  const interestIncomeVar = varRev('interest_income');
+  const finMarginTotalVar = sA('financial_margin') - sB('financial_margin');
+  // Financial Margin variance ex interest income = remainder (captures interest expense + rate effects)
+  const finMarginVar = finMarginTotalVar - interestIncomeVar;
+  const lossesVar = varCost('llr_rpsd');
+  const otherOpRevVar = varRev('other_operating_revenue');
+  const maintCogsVar = varCost('cogs');
+  const payrollVar = varCost('payroll_expense');
+  const sgaExPayrollVar = (sA('total_sga') - sB('total_sga')) - payrollVar;
+  const daVar = varCost('da');
+  const taxesNonOpVar = (sA('taxes')-sB('taxes')) + (sA('non_operating')-sB('non_operating')) + (sA('ptu')-sB('ptu'));
+
+  const explained = interestIncomeVar + finMarginVar + lossesVar + otherOpRevVar + maintCogsVar + payrollVar + sgaExPayrollVar + daVar + taxesNonOpVar;
+  const totalVar = niAct - niBud;
+  const other = totalVar - explained;
+
+  const steps = [
+    {l:'NI Budget', val: niBud, type:'total', color:'#168888'},
+    {l:'Interest Income', val: interestIncomeVar, type:'var'},
+    {l:'Financial Margin', val: finMarginVar, type:'var'},
+    {l:'Losses / LLR', val: lossesVar, type:'var'},
+    {l:'Other Op. Revenue', val: otherOpRevVar, type:'var'},
+    {l:'Maintenance & COGS', val: maintCogsVar, type:'var'},
+    {l:'Payroll', val: payrollVar, type:'var'},
+    {l:'SG&A (ex-payroll)', val: sgaExPayrollVar, type:'var'},
+    {l:'D&A', val: daVar, type:'var'},
+    {l:'Taxes & Non-Op', val: taxesNonOpVar, type:'var'},
+  ];
+  if(Math.abs(other) > 0.02) steps.push({l:'Other', val: other, type:'var'});
+  steps.push({l:'NI Actual', val: niAct, type:'total', color:'#168888'});
+
+  const labels = steps.map(s=>s.l);
+  const bases=[], tops=[], colors=[], displayVals=[];
+  let running = niBud;
+  steps.forEach(stp=>{
+    if(stp.type==='total'){
+      bases.push(0); tops.push(stp.val); colors.push(stp.color); displayVals.push(stp.val);
+      running = stp.val;
+    } else {
+      const start = running, end = running + stp.val;
+      bases.push(Math.min(start,end)); tops.push(Math.abs(stp.val));
+      colors.push(stp.val>=0 ? '#5dd39e' : '#ff8080');
+      displayVals.push(stp.val);
+      running = end;
+    }
+  });
+
+  if(__NI_BRIDGE_CHART) __NI_BRIDGE_CHART.destroy();
+  __NI_BRIDGE_CHART = new Chart(ctx, {
+    type:'bar',
+    data:{ labels, datasets:[
+      {label:'_base', data:bases, backgroundColor:'transparent', borderWidth:0, stack:'wf'},
+      {label:'Var', data:tops, backgroundColor:colors, stack:'wf', borderRadius:3}
+    ]},
+    options:{
+      responsive:true, maintainAspectRatio:false,
+      plugins:{
+        legend:{display:false},
+        tooltip:{ callbacks:{
+          title:c=>labels[c[0].dataIndex],
+          label:c=>{ const v=displayVals[c.dataIndex]; const sign=v>=0?'+':'';
+            return steps[c.dataIndex].type==='total' ? 'MXN '+fmtMm(v)+'M' : (sign+fmtMm(v)+'M vs Budget'); }
+        }}
+      },
+      scales:{
+        x:{ticks:{font:{family:'Space Grotesk',size:10},color:'#666',maxRotation:35}, grid:{display:false}},
+        y:{ticks:{font:{family:'Space Grotesk',size:10},color:'#888',callback:v=>fmtMm(v)+'M'}, grid:{color:'rgba(0,0,0,0.05)'}}
+      }
+    },
+    plugins:[{
+      id:'niBridgeLabels',
+      afterDatasetsDraw(chart){
+        const {ctx} = chart;
+        const meta = chart.getDatasetMeta(1);
+        ctx.save();
+        ctx.font = 'bold 10px "Space Grotesk", sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillStyle = '#1F5454';
+        meta.data.forEach((bar,i)=>{
+          const v = displayVals[i];
+          const sign = v>=0 && steps[i].type==='var' ? '+' : '';
+          ctx.fillText(sign+fmtMm(v), bar.x, bar.y - 6);
+        });
+        ctx.restore();
+      }
+    }]
+  });
+}
+</script>
+<script>
+let __OPS_CHARTS = {};
+const TEAL='#11ABAB', FOREST='#1F5454', MINT='#7BDADA', RED='#C0392B', GREEN='#117A45', AMBER='#E59500', GOLD='#FFD84D';
+
+function getRangeIdx(){
+  const mode = (document.querySelector('input[name="ops-range"]:checked')||{value:'ytd'}).value;
+  if(mode==='ytd') return {start:YTD_START_2026, end:CUR};
+  return {start:0, end:CUR};
+}
+
+function destroyChart(id){ if(__OPS_CHARTS[id]){ __OPS_CHARTS[id].destroy(); delete __OPS_CHARTS[id]; } }
+
+function baseLineOpts(yfmt){
+  return {
+    responsive:true, maintainAspectRatio:false,
+    plugins:{legend:{position:'bottom',labels:{font:{family:'Space Grotesk',size:10},boxWidth:12}}},
+    scales:{
+      x:{ticks:{font:{family:'Space Grotesk',size:9.5},color:'#888',maxRotation:45},grid:{display:false}},
+      y:{ticks:{font:{family:'Space Grotesk',size:9.5},color:'#888',callback:yfmt},grid:{color:'rgba(0,0,0,0.05)'}}
+    }
+  };
+}
+
+function initOpsCharts(){ renderAllOpsCharts(); }
+
+function renderAllOpsCharts(){
+  const {start,end} = getRangeIdx();
+  const labels = [];
+  for(let i=start;i<=end;i++) labels.push(mlbl(i));
+  const slice = (key)=> arr(key).slice(start,end+1);
+
+  destroyChart('origination');
+  __OPS_CHARTS.origination = new Chart(document.getElementById('chart-origination'), {
+    type:'bar',
+    data:{labels, datasets:[{label:'Origination (MXNm)', data:slice('origination_total'), backgroundColor:TEAL, borderRadius:3}]},
+    options: baseLineOpts(v=>v+'M')
+  });
+
+  destroyChart('portfolio');
+  __OPS_CHARTS.portfolio = new Chart(document.getElementById('chart-portfolio'), {
+    type:'line',
+    data:{labels, datasets:[
+      {label:'Gross Portfolio (Board)', data:slice('gross_portfolio_risk'), borderColor:FOREST, backgroundColor:'rgba(31,84,84,0.08)', tension:0.25, fill:false},
+      {label:'Net Portfolio (Board)', data:slice('net_portfolio_board'), borderColor:TEAL, backgroundColor:'rgba(17,171,171,0.12)', tension:0.25, fill:true},
+    ]},
+    options: baseLineOpts(v=>v+'M')
+  });
+
+  destroyChart('active-units');
+  __OPS_CHARTS['active-units'] = new Chart(document.getElementById('chart-active-units'), {
+    type:'line',
+    data:{labels, datasets:[
+      {label:'Active Units', data:slice('active_units'), borderColor:TEAL, backgroundColor:'rgba(17,171,171,0.12)', tension:0.25, fill:true},
+      {label:'Active Units (Avg)', data:slice('active_units_avg'), borderColor:AMBER, borderDash:[4,3], tension:0.25, fill:false},
+    ]},
+    options: baseLineOpts(v=>fmtInt(v))
+  });
+
+  destroyChart('buckets');
+  __OPS_CHARTS.buckets = new Chart(document.getElementById('chart-buckets'), {
+    type:'bar',
+    data:{labels, datasets:[
+      {label:'Up to 14d', data:slice('bucket_14').map(v=>v*100), backgroundColor:MINT, stack:'b'},
+      {label:'Up to 60d', data:slice('bucket_60').map(v=>v*100), backgroundColor:AMBER, stack:'b'},
+      {label:'+61d', data:slice('bucket_61plus').map(v=>v*100), backgroundColor:RED, stack:'b'},
+    ]},
+    options: baseLineOpts(v=>v+'%')
+  });
+
+  destroyChart('renewal');
+  __OPS_CHARTS.renewal = new Chart(document.getElementById('chart-renewal'), {
+    type:'line',
+    data:{labels, datasets:[
+      {label:'Renewal Rate (Board)', data:slice('renewal_rate_board').map(v=>v*100), borderColor:GREEN, tension:0.25, fill:false},
+      {label:'Renewal Rate (Mgmt)', data:slice('renewal_rate_mgmt').map(v=>v*100), borderColor:TEAL, borderDash:[4,3], tension:0.25, fill:false},
+    ]},
+    options: baseLineOpts(v=>v+'%')
+  });
+
+  destroyChart('repo');
+  __OPS_CHARTS.repo = new Chart(document.getElementById('chart-repo'), {
+    type:'bar',
+    data:{labels, datasets:[
+      {label:'Repossessed (EoP)', data:slice('repossessed_units_eop'), backgroundColor:RED, borderRadius:3},
+      {label:'Repossessed (Avg)', data:slice('repossessed_units_avg'), backgroundColor:AMBER, borderRadius:3},
+    ]},
+    options: baseLineOpts(v=>fmtInt(v))
+  });
+
+  destroyChart('headcount');
+  __OPS_CHARTS.headcount = new Chart(document.getElementById('chart-headcount'), {
+    type:'line',
+    data:{labels, datasets:[{label:'Headcount Total', data:slice('headcount_total'), borderColor:FOREST, backgroundColor:'rgba(31,84,84,0.10)', tension:0.25, fill:true}]},
+    options: baseLineOpts(v=>fmtInt(v))
+  });
+}
+</script>
+<script>
+const LS_HL_KEY = 'lto-highlights-edits';
+
+function loadHighlights(){
+  let stored = null;
+  try { stored = JSON.parse(localStorage.getItem(LS_HL_KEY) || 'null'); } catch(e){}
+  if(stored && stored[mlbl(CUR)]){
+    HL = stored[mlbl(CUR)];
+    return;
+  }
+  const tmpl = window.__HL_TEMPLATE || {};
+  const monthKey = mlbl(CUR);
+  if(tmpl[monthKey]){
+    HL = JSON.parse(JSON.stringify(tmpl[monthKey]));
+  } else {
+    HL = {highlights:[], lowlights:[]};
+  }
+}
+
+function saveHighlights(){
+  let stored = null;
+  try { stored = JSON.parse(localStorage.getItem(LS_HL_KEY) || '{}'); } catch(e){ stored = {}; }
+  stored[mlbl(CUR)] = HL;
+  try { localStorage.setItem(LS_HL_KEY, JSON.stringify(stored)); } catch(e){}
+}
+
+function renderHighlights(){
+  renderHLList('hl-list', HL.highlights, 'highlights');
+  renderHLList('ll-list', HL.lowlights, 'lowlights');
+}
+
+function renderHLList(elId, items, kind){
+  const el = document.getElementById(elId);
+  el.innerHTML = items.map((it,i)=>{
+    return '<div class="hl-item" data-kind="'+kind+'" data-i="'+i+'">'+
+      '<div style="flex:1">'+
+      '<input class="t" value="'+(it.title||'').replace(/"/g,'&quot;')+'" placeholder="Title">'+
+      '<textarea class="b" placeholder="Detail">'+(it.body||'')+'</textarea>'+
+      '</div><button class="rm">✕</button></div>';
+  }).join('');
+  el.querySelectorAll('.hl-item').forEach(div=>{
+    const i = parseInt(div.dataset.i);
+    div.querySelector('.t').addEventListener('input', e=>{ items[i].title = e.target.value; saveHighlights(); });
+    div.querySelector('.b').addEventListener('input', e=>{ items[i].body = e.target.value; saveHighlights(); });
+    div.querySelector('.rm').addEventListener('click', ()=>{ items.splice(i,1); saveHighlights(); renderHighlights(); });
+  });
+}
+
+document.addEventListener('click', e=>{
+  if(e.target.classList.contains('hl-add')){
+    const kind = e.target.dataset.kind;
+    HL[kind].push({title:'', body:''});
+    saveHighlights();
+    renderHighlights();
+  }
+});
+
+// ============ VARIATION TAB ============
+const ALL_KPI_KEYS = [
+  'net_portfolio_board','origination_total','active_units','collection_rate','bucket_14','bucket_60','bucket_61plus',
+  'renewal_rate_board','renewal_rate_mgmt','repossessed_units_eop','nominal_interest_rate_ytd','nim_annualized',
+  'interest_income','interest_expense','financial_margin','llr_rpsd','adj_financial_margin','other_operating_revenue',
+  'net_operating_revenue','cogs','payroll_expense','total_sga','da','ebt','net_income','headcount_total','asset_yield_ytd',
+  'roe_pct_board','avg_leasing_value'
+];
+const KPI_LABELS = {
+  net_portfolio_board:'Net Portfolio (Board)', origination_total:'Origination', active_units:'Active Units',
+  collection_rate:'Collection Rate', bucket_14:'Bucket 14d', bucket_60:'Bucket 60d', bucket_61plus:'Bucket +61d',
+  renewal_rate_board:'Renewal Rate (Board)', renewal_rate_mgmt:'Renewal Rate (Mgmt)', repossessed_units_eop:'Repossessed Units (EoP)',
+  nominal_interest_rate_ytd:'Nominal Interest Rate YTD', nim_annualized:'NIM (Annualized)', interest_income:'Interest Income',
+  interest_expense:'Interest Expense', financial_margin:'Financial Margin', llr_rpsd:'LLR & RPSD', adj_financial_margin:'Adj. Financial Margin',
+  other_operating_revenue:'Other Operating Revenue', net_operating_revenue:'Net Operating Revenue', cogs:'COGS',
+  payroll_expense:'Payroll Expense', total_sga:'Total SG&A', da:'D&A', ebt:'EBT', net_income:'Net Income',
+  headcount_total:'Headcount', asset_yield_ytd:'Asset Yield YTD', roe_pct_board:'ROE % (Board)', avg_leasing_value:'Avg. Leasing Value'
+};
+const KPI_UNITS = {
+  net_portfolio_board:'mxnm', origination_total:'mxnm', active_units:'count', collection_rate:'pct', bucket_14:'pct',
+  bucket_60:'pct', bucket_61plus:'pct', renewal_rate_board:'pct', renewal_rate_mgmt:'pct', repossessed_units_eop:'count',
+  nominal_interest_rate_ytd:'pct', nim_annualized:'pct', interest_income:'mxnm', interest_expense:'mxnm', financial_margin:'mxnm',
+  llr_rpsd:'mxnm', adj_financial_margin:'mxnm', other_operating_revenue:'mxnm', net_operating_revenue:'mxnm', cogs:'mxnm',
+  payroll_expense:'mxnm', total_sga:'mxnm', da:'mxnm', ebt:'mxnm', net_income:'mxnm', headcount_total:'count',
+  asset_yield_ytd:'pct', roe_pct_board:'pct', avg_leasing_value:'raw'
+};
+
+function initVariationTab(){
+  const selA = document.getElementById('var-month-a');
+  const selB = document.getElementById('var-month-b');
+  MONTHS.forEach((m,i)=>{
+    if(i > CUR) return; // only months with any data context (avoid empty future months)
+    selA.innerHTML += '<option value="'+i+'">'+m+'</option>';
+    selB.innerHTML += '<option value="'+i+'">'+m+'</option>';
+  });
+  selA.value = Math.max(0,CUR-1);
+  selB.value = CUR;
+  selA.addEventListener('change', renderVarDelta);
+  selB.addEventListener('change', renderVarDelta);
+  renderVarDelta();
+
+  const bA = document.getElementById('kpi-builder-a');
+  const bB = document.getElementById('kpi-builder-b');
+  ALL_KPI_KEYS.forEach(k=>{
+    bA.innerHTML += '<option value="'+k+'">'+KPI_LABELS[k]+'</option>';
+    bB.innerHTML += '<option value="'+k+'">'+KPI_LABELS[k]+'</option>';
+  });
+  bA.value = 'net_income'; bB.value = 'financial_margin';
+  bA.addEventListener('change', renderKPIBuilder);
+  bB.addEventListener('change', renderKPIBuilder);
+  document.getElementById('kpi-builder-range').addEventListener('change', renderKPIBuilder);
+  renderKPIBuilder();
+}
+
+function renderVarDelta(){
+  const ia = parseInt(document.getElementById('var-month-a').value);
+  const ib = parseInt(document.getElementById('var-month-b').value);
+  let thead = '<thead><tr><th class="firstcol">KPI</th><th>'+mlbl(ia)+'</th><th>'+mlbl(ib)+'</th><th>Δ</th><th>Δ%</th></tr></thead>';
+  let tbody = '<tbody>';
+  ALL_KPI_KEYS.forEach(k=>{
+    const A = arr(k);
+    const va = A[ia], vb = A[ib];
+    const delta = (va!=null && vb!=null) ? vb - va : null;
+    const deltaPct = (delta!=null && va) ? delta/Math.abs(va)*100 : null;
+    const unit = KPI_UNITS[k];
+    const cls = delta==null ? '' : (delta>=0 ? 'pos' : 'neg');
+    tbody += '<tr><td class="lbl">'+KPI_LABELS[k]+'</td>'+
+      '<td>'+fmtVal(va,unit)+'</td><td>'+fmtVal(vb,unit)+'</td>'+
+      '<td class="'+cls+'">'+(delta==null?'—':(delta>=0?'+':'')+fmtVal(delta,unit))+'</td>'+
+      '<td class="'+cls+'">'+(deltaPct==null?'—':(deltaPct>=0?'+':'')+deltaPct.toFixed(1)+'%')+'</td></tr>';
+  });
+  tbody += '</tbody>';
+  document.getElementById('var-delta-table').innerHTML = thead + tbody;
+}
+
+let __KPI_BUILDER_CHART = null;
+function renderKPIBuilder(){
+  const ka = document.getElementById('kpi-builder-a').value;
+  const kb = document.getElementById('kpi-builder-b').value;
+  const range = document.getElementById('kpi-builder-range').value;
+  const start = range==='ytd' ? YTD_START_2026 : 0;
+  const end = CUR;
+  const labels = []; for(let i=start;i<=end;i++) labels.push(mlbl(i));
+  const dataA = arr(ka).slice(start,end+1);
+  const dataB = arr(kb).slice(start,end+1);
+  const ctx = document.getElementById('kpi-builder-chart');
+  if(__KPI_BUILDER_CHART) __KPI_BUILDER_CHART.destroy();
+  __KPI_BUILDER_CHART = new Chart(ctx, {
+    type:'line',
+    data:{labels, datasets:[
+      {label:KPI_LABELS[ka], data:dataA, borderColor:TEAL, backgroundColor:'rgba(17,171,171,0.10)', yAxisID:'y', tension:0.25, fill:true},
+      {label:KPI_LABELS[kb], data:dataB, borderColor:FOREST, backgroundColor:'rgba(31,84,84,0.08)', yAxisID:'y1', tension:0.25, fill:false, borderDash:[4,3]},
+    ]},
+    options:{
+      responsive:true, maintainAspectRatio:false,
+      plugins:{legend:{position:'bottom',labels:{font:{family:'Space Grotesk',size:10}}}},
+      scales:{
+        x:{ticks:{font:{size:9.5},maxRotation:45},grid:{display:false}},
+        y:{position:'left',ticks:{font:{size:9.5}},grid:{color:'rgba(0,0,0,0.05)'}},
+        y1:{position:'right',ticks:{font:{size:9.5}},grid:{display:false}}
+      }
+    }
+  });
+}
+</script>
+<script>
+const LS_CHAT_FEEDBACK = 'vemia-feedback';
+const LS_CHAT_LOG = 'vemia-chat-log';
+
+const GLOSSARY = {
+  origination: 'Origination: the MXNm (or unit count) of new vehicles placed with drivers under lease-to-own contracts in a given month.',
+  'active units': 'Active Units: vehicles currently on an active LTO contract with a driver (generating interest income).',
+  buckets: 'Buckets: portfolio aging buckets by days past due — Up to 14 days, Up to 60 days, and +61 days — expressed as % of gross portfolio.',
+  'renewal rate': 'Renewal Rate: the % of maturing LTO contracts that get renewed rather than terminated. Board and Mgmt versions may differ in methodology/timing.',
+  'repossessed units': 'Repossessed Units: vehicles recovered from drivers (due to default/termination) and returned to VEMO Impulso inventory.',
+  'net interest margin': 'Net Interest Margin (NIM): Financial Margin as a % of the portfolio, a core profitability measure of the lending book.',
+  'financial margin': 'Financial Margin: Interest Income minus Interest Expense — the core spread VEMO Impulso earns on its financed portfolio before losses.',
+  llr: 'LLR (Loan Loss Reserve): the reserve set aside for expected credit losses on the LTO portfolio, deducted from Financial Margin to get Adjusted Financial Margin.',
+  roe: 'ROE (Return on Equity): Net Income as a % of equity deployed in the LTO business — measures capital efficiency.',
+  ebt: 'EBT (Earnings Before Tax): Net Operating Revenue less COGS, SG&A, D&A and Non-Operating items, before tax and PTU.',
+};
+
+const FUN_FACTS = [
+  "Lease-to-own (LTO) lets a driver build equity in a vehicle with every payment, instead of renting indefinitely with nothing to show for it.",
+  "VEMO Impulso's tagline is literal: 'De chofer a dueño' — from driver to owner.",
+  "Because LTO contracts amortize principal over time, the 'Net Portfolio' shrinks per unit as a driver approaches the purchase option, even if the fleet count stays flat.",
+  "A rising +61 days past due bucket is usually the earliest warning sign of portfolio credit stress in an LTO book, well before write-offs show up.",
+  "Renewal Rate matters as much as Origination in LTO — a contract that renews avoids the cost and risk of a full repossession-and-reorigination cycle.",
+  "Unlike a car loan, LTO can bundle in vehicle maintenance, GPS, and insurance rebates — VEMO Impulso nets several of these into 'Other Operating Revenue'.",
+  "Sin enganche (no down payment) lowers the barrier to entry but shifts more of the credit risk onto the lender in the first months of the contract.",
+  "The 'Purchase Option' line in the P&L is the fee/settlement a driver pays to formally take ownership once the lease is fully amortized.",
+];
+
+function chatBotAnswer(q){
+  const ql = q.toLowerCase().trim();
+
+  if(/^(hi|hello|hey|hola|who are you|what are you)/.test(ql)){
+    return "Hi! I'm <b>VEMIA</b>, VEMO's AI assistant for the VEMO Impulso (LTO) dashboard. Ask me about a KPI, the P&L, the Net Income bridge, or 'what is VEMO Impulso'.";
+  }
+  if(/who (leads|runs|manages)|leadership|org chart/.test(ql)){
+    return "Ask David Jiménez (FP&A / dashboard owner) for the current org chart — VEMIA doesn't have that mapped yet.";
+  }
+  if(/what is (vemo impulso|lto)|about vemo impulso|explain lto/.test(ql)){
+    return "<b>VEMO Impulso</b> is VEMO's lease-to-own (LTO) financing product for Uber &amp; DiDi drivers — <b>'De chofer a dueño'</b>. Drivers get a vehicle with no down payment (sin enganche), and their payments build toward eventual ownership. That's different from DAE (driver-as-employee, VEMO owns and operates the fleet) or Subarrendamiento (pure sublease, no path to ownership). Site: vemoimpulso.mx.";
+  }
+  if(/glossary|define|what does .* mean|what is (llr|roe|ebt|nim)\b/.test(ql)){
+    for(const k in GLOSSARY){ if(ql.includes(k)) return GLOSSARY[k]; }
+    return "Glossary terms I know: Origination, Active Units, Buckets, Renewal Rate, Repossessed Units, Net Interest Margin, Financial Margin, LLR, ROE, EBT. Ask 'define <term>'.";
+  }
+  if(/fun fact|tell me something/.test(ql)){
+    return FUN_FACTS[Math.floor(Math.random()*FUN_FACTS.length)];
+  }
+  if(/bridge|waterfall/.test(ql)){
+    return narrateNIBridge();
+  }
+  if(/executive summary|summary for|how are we doing|overview/.test(ql)){
+    return execSummaryText();
+  }
+  if(/play game|vemo race|game/.test(ql)){
+    if(typeof startVemoGame === 'function') startVemoGame();
+    return "Launching <b>VEMO RACE</b> — dodge the cars, high score saves automatically!";
+  }
+  if(/help|what can you do/.test(ql)){
+    return "Try asking about: a specific KPI ('what is collection rate this month'), the executive summary, the Net Income bridge, glossary terms, or 'what is VEMO Impulso'.";
+  }
+
+  // Fuzzy KPI lookup
+  const kpiMatch = fuzzyKPILookup(ql);
+  if(kpiMatch) return kpiMatch;
+
+  return "🤔 I didn't quite understand that — try asking about a KPI, the P&L, or 'what is VEMO Impulso'.";
+}
+
+function fuzzyKPILookup(ql){
+  let best = null, bestScore = 0;
+  ALL_KPI_KEYS.forEach(k=>{
+    const label = KPI_LABELS[k].toLowerCase();
+    const words = label.split(/[^a-z0-9]+/).filter(w=>w.length>=4);
+    let score = 0;
+    words.forEach(w=>{ if(ql.includes(w)) score++; });
+    if(score > bestScore){ bestScore = score; best = k; }
+  });
+  if(!best || bestScore===0) return null;
+  const A = arr(best);
+  const unit = KPI_UNITS[best];
+  const val = A[CUR];
+  const prev = CUR>0 ? A[CUR-1] : null;
+  const b = barr(best);
+  const bud = b ? b[CUR] : null;
+  let txt = "<b>"+KPI_LABELS[best]+"</b> ("+mlbl(CUR)+"): "+fmtVal(val,unit);
+  if(prev!=null){ const d = val-prev; txt += " | vs "+mlbl(CUR-1)+": "+(d>=0?'+':'')+fmtVal(d,unit); }
+  if(bud!=null){ const d = val-bud; txt += " | vs Budget: "+(d>=0?'+':'')+fmtVal(d,unit); }
+  return txt;
+}
+
+function execSummaryText(){
+  const ni = arr('net_income')[CUR];
+  const fm = arr('financial_margin')[CUR];
+  const port = arr('net_portfolio_board')[CUR];
+  const cr = arr('collection_rate')[CUR];
+  const b61 = arr('bucket_61plus')[CUR];
+  const rr = arr('renewal_rate_board')[CUR];
+  let flags = [];
+  const b61Prev = CUR>0 ? arr('bucket_61plus')[CUR-1] : null;
+  if(b61Prev!=null && b61 > b61Prev) flags.push('+61 days past due bucket is rising ('+fmtPct(b61Prev,1)+' → '+fmtPct(b61,1)+')');
+  if(rr!=null && rr < 0.7) flags.push('Renewal Rate (Board) is below 70% ('+fmtPct(rr,1)+')');
+  return "<b>Executive Summary — "+mlbl(CUR)+"</b>\n"+
+    "Net Income: "+fmtMm(ni)+"M | Financial Margin: "+fmtMm(fm)+"M\n"+
+    "Net Portfolio (Board): "+fmtMm(port)+"M | Collection Rate: "+fmtPct(cr,1)+"\n"+
+    (flags.length ? "⚠️ Risk flags: "+flags.join('; ') : "No major risk flags detected this month.");
+}
+
+function narrateNIBridge(){
+  const s = YTD_START_2026, e = CUR;
+  function sA(k){ return sum(arr(k), s, e); }
+  function sB(k){ const b=barr(k); return b?sum(b,s,e):0; }
+  const niBud = sB('net_income'), niAct = sA('net_income');
+  const delta = niAct - niBud;
+  return "<b>Net Income Bridge (YTD)</b>\nBudget: "+fmtMm(niBud)+"M → Actual: "+fmtMm(niAct)+"M ("+(delta>=0?'+':'')+fmtMm(delta)+"M).\n"+
+    "Key drivers: Interest Income, Financial Margin, Losses/LLR, Other Operating Revenue, Maintenance & COGS, Payroll, SG&A, D&A, and Taxes/Non-Operating each contribute a step in the P&L tab waterfall — open the P&L tab to see the full breakdown.";
+}
+
+function initChatbot(){
+  const fab = document.getElementById('chat-fab');
+  const panel = document.getElementById('chat-panel');
+  const log = document.getElementById('chat-log');
+  const input = document.getElementById('chat-input');
+
+  function loadLog(){
+    try { return JSON.parse(localStorage.getItem(LS_CHAT_LOG)||'[]'); } catch(e){ return []; }
+  }
+  function saveLog(msgs){
+    try { localStorage.setItem(LS_CHAT_LOG, JSON.stringify(msgs.slice(-40))); } catch(e){}
+  }
+  let msgs = loadLog();
+
+  function renderLog(){
+    log.innerHTML = msgs.map((m,i)=>{
+      if(m.role==='user') return '<div class="chat-msg user">'+escapeHtml(m.text)+'</div>';
+      return '<div class="chat-msg bot">'+m.text+
+        '<div class="fb"><button data-i="'+i+'" data-v="up">👍</button><button data-i="'+i+'" data-v="down">👎</button>'+
+        '<button data-i="'+i+'" data-v="copy">📋</button>'+
+        '<button data-i="'+i+'" data-v="ask">🧠 Ask Claude</button></div></div>';
+    }).join('');
+    log.scrollTop = log.scrollHeight;
+  }
+  function escapeHtml(s){ return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+  function addUser(text){ msgs.push({role:'user', text}); }
+  function addBot(text){ msgs.push({role:'bot', text}); }
+
+  function send(text){
+    if(!text || !text.trim()) return;
+    addUser(text);
+    const answer = chatBotAnswer(text);
+    addBot(answer);
+    saveLog(msgs);
+    renderLog();
+    input.value = '';
+  }
+
+  fab.addEventListener('click', ()=>{
+    panel.classList.toggle('open');
+    if(panel.classList.contains('open') && !msgs.length){
+      addBot("Hi! I'm <b>VEMIA</b>, VEMO's AI assistant for the VEMO Impulso (LTO) dashboard. Ask me about a KPI, the P&L, or the Net Income bridge.");
+      saveLog(msgs); renderLog();
+    } else renderLog();
+  });
+  document.getElementById('chat-close').addEventListener('click', ()=>panel.classList.remove('open'));
+  document.getElementById('chat-clear').addEventListener('click', ()=>{ msgs=[]; saveLog(msgs); renderLog(); });
+  document.getElementById('chat-send').addEventListener('click', ()=>send(input.value));
+  input.addEventListener('keydown', e=>{ if(e.key==='Enter') send(input.value); });
+  document.querySelectorAll('.chat-hint').forEach(btn=>{
+    btn.addEventListener('click', ()=>send(btn.dataset.q));
+  });
+  log.addEventListener('click', e=>{
+    const btn = e.target.closest('button[data-v]');
+    if(!btn) return;
+    const i = parseInt(btn.dataset.i);
+    const v = btn.dataset.v;
+    if(v==='up' || v==='down'){
+      let fb=[]; try{ fb = JSON.parse(localStorage.getItem(LS_CHAT_FEEDBACK)||'[]'); }catch(e){}
+      fb.push({q: msgs[i-1]? msgs[i-1].text : '', a: msgs[i].text, vote:v, ts:Date.now()});
+      try{ localStorage.setItem(LS_CHAT_FEEDBACK, JSON.stringify(fb.slice(-100))); }catch(e){}
+      btn.style.opacity='1'; btn.textContent = v==='up' ? '👍 thanks!' : '👎 noted';
+    } else if(v==='copy'){
+      const tmp = document.createElement('div'); tmp.innerHTML = msgs[i].text;
+      navigator.clipboard && navigator.clipboard.writeText(tmp.textContent);
+      btn.textContent = '✅ copied';
+      setTimeout(()=>{ btn.textContent='📋'; }, 1500);
+    } else if(v==='ask'){
+      const userQ = msgs[i-1] ? msgs[i-1].text : '';
+      const context = "Context: VEMO Impulso is VEMO's lease-to-own (LTO) vehicle financing product for Uber/DiDi drivers ('De chofer a dueño', no down payment). I'm looking at the LTO executive dashboard. My question: ";
+      const url = 'https://claude.ai/new?q=' + encodeURIComponent(context + userQ);
+      window.open(url, '_blank');
+    }
+  });
+
+  renderLog();
+}
+</script>
+<script>
+function setupVemoGame(){
+  const overlay = document.getElementById('vemo-game-overlay');
+  const canvas = document.getElementById('vemo-game-canvas');
+  if(!overlay || !canvas) return;
+  const ctx = canvas.getContext('2d');
+  const W = canvas.width, H = canvas.height;
+  const LANES_X = [W*0.20, W*0.50, W*0.80];
+  const CAR_W = 36, CAR_H = 60;
+  let player = {lane:1, x:LANES_X[1], targetX:LANES_X[1]};
+  let obstacles = [], score = 0, best = 0, speed = 2.5, speedMult = 1;
+  let spawnTimer = 0, spawnInterval = 70, running = false, paused = false, stripeOffset = 0, rafId = null;
+  try { best = parseInt(localStorage.getItem('vemo-race-best')||'0'); } catch(e){}
+  const scoreEl = document.getElementById('vg-score');
+  const bestEl = document.getElementById('vg-best');
+  const speedEl = document.getElementById('vg-speed');
+  if(bestEl) bestEl.textContent = best;
+
+  function reset(){
+    player = {lane:1, x:LANES_X[1], targetX:LANES_X[1]};
+    obstacles = []; score = 0; speed = 2.5; speedMult = 1;
+    spawnTimer = 0; spawnInterval = 70; paused = false; running = true;
+    if(scoreEl) scoreEl.textContent = 0;
+    if(speedEl) speedEl.textContent = '1x';
+  }
+  function spawn(){
+    const lane = Math.floor(Math.random()*3);
+    obstacles.push({lane, y:-CAR_H, color:['#ff7676','#ffa94d','#FFD84D','#5dd39e','#11ABAB'][Math.floor(Math.random()*5)]});
+  }
+  function drawRoad(){
+    ctx.fillStyle = '#1a2a2a'; ctx.fillRect(0,0,W,H);
+    ctx.fillStyle = '#11ABAB'; ctx.fillRect(W*0.05,0,4,H); ctx.fillRect(W*0.95-4,0,4,H);
+    ctx.strokeStyle = '#fff'; ctx.lineWidth = 2;
+    ctx.setLineDash([22,14]); ctx.lineDashOffset = -stripeOffset;
+    [W*0.35, W*0.65].forEach(x=>{ ctx.beginPath(); ctx.moveTo(x,0); ctx.lineTo(x,H); ctx.stroke(); });
+    ctx.setLineDash([]);
+  }
+  function drawCar(x,y,color){
+    ctx.fillStyle = 'rgba(0,0,0,0.3)'; ctx.fillRect(x-CAR_W/2+3,y+4,CAR_W,CAR_H);
+    ctx.fillStyle = color; ctx.fillRect(x-CAR_W/2,y,CAR_W,CAR_H);
+    ctx.fillStyle = 'rgba(0,0,0,0.6)';
+    ctx.fillRect(x-CAR_W/2+4,y+8,CAR_W-8,16);
+    ctx.fillRect(x-CAR_W/2+4,y+CAR_H-22,CAR_W-8,14);
+  }
+  function drawPlayer(){ drawCar(player.x, H-CAR_H-18, '#7BDADA'); }
+  function gameOver(){
+    running = false;
+    if(score > best){ best = score; try{ localStorage.setItem('vemo-race-best', best); }catch(e){} if(bestEl) bestEl.textContent = best; }
+    ctx.fillStyle = 'rgba(0,0,0,0.75)'; ctx.fillRect(0,0,W,H);
+    ctx.fillStyle = '#ff7676'; ctx.font = 'bold 32px sans-serif'; ctx.textAlign = 'center';
+    ctx.fillText('CRASH!', W/2, H/2-30);
+  }
+  function loop(){
+    if(!running) return;
+    if(paused){ rafId = requestAnimationFrame(loop); return; }
+    stripeOffset += speed; if(stripeOffset>36) stripeOffset=0;
+    const dx = player.targetX - player.x;
+    if(Math.abs(dx)>0.5) player.x += dx*0.20; else player.x = player.targetX;
+    spawnTimer++;
+    if(spawnTimer >= spawnInterval){ spawn(); spawnTimer=0; }
+    obstacles.forEach(o=>{ o.y += speed; });
+    const playerY = H-CAR_H-18;
+    const passed = obstacles.filter(o=>o.y>H);
+    if(passed.length){
+      score += passed.length;
+      if(scoreEl) scoreEl.textContent = score;
+      const newMult = 1 + Math.floor(score/5)*0.15;
+      if(newMult !== speedMult){
+        speedMult = newMult; speed = 2.5*speedMult;
+        spawnInterval = Math.max(28, 70-Math.floor((speedMult-1)*40));
+        if(speedEl) speedEl.textContent = speedMult.toFixed(1)+'x';
+      }
+    }
+    obstacles = obstacles.filter(o=>o.y<=H);
+    for(const o of obstacles){
+      const ox = LANES_X[o.lane];
+      if(o.y+CAR_H > playerY && o.y < playerY+CAR_H){
+        if(Math.abs(ox-player.x) < CAR_W*0.85){ gameOver(); return; }
+      }
+    }
+    drawRoad();
+    obstacles.forEach(o=>drawCar(LANES_X[o.lane], o.y, o.color));
+    drawPlayer();
+    rafId = requestAnimationFrame(loop);
+  }
+  function open(){ overlay.style.display='flex'; drawRoad(); drawPlayer(); }
+  function close(){ overlay.style.display='none'; running=false; if(rafId){ cancelAnimationFrame(rafId); rafId=null; } }
+  window.startVemoGame = open;
+  document.getElementById('vg-start').addEventListener('click', ()=>{ reset(); loop(); });
+  document.getElementById('vg-close').addEventListener('click', close);
+  document.addEventListener('keydown', e=>{
+    if(overlay.style.display !== 'flex') return;
+    if(e.key==='ArrowLeft' || e.key==='a'){ player.lane=Math.max(0,player.lane-1); player.targetX=LANES_X[player.lane]; }
+    else if(e.key==='ArrowRight' || e.key==='d'){ player.lane=Math.min(2,player.lane+1); player.targetX=LANES_X[player.lane]; }
+    else if(e.key===' '){ e.preventDefault(); paused=!paused; }
+    else if(e.key==='r' || e.key==='R'){ reset(); loop(); }
+    else if(e.key==='Escape'){ close(); }
+  });
+}
+
+if(document.readyState==='loading') document.addEventListener('DOMContentLoaded', boot);
+else boot();
+</script>
+</body>
+</html>
