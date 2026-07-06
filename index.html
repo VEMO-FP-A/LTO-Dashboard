@@ -415,11 +415,17 @@ const KPI13 = [
 
 function fmtVal(v, unit){
   if(v==null || isNaN(v)) return '—';
-  if(unit==='pct') return fmtPct(v,1);
+  if(unit==='pct'){
+    // Guard against broken source-Excel formulas (e.g. divide-by-near-zero in a
+    // ratio like NIM) producing implausible outliers such as -3991%. A real
+    // financial-ratio KPI should never plausibly exceed +/-500%.
+    if(Math.abs(v) > 5) return '⚠ check source';
+    return fmtPct(v,1);
+  }
   if(unit==='count') return fmtInt(v);
   return fmtMm(v);
 }
-function devPct(a,b){ if(b==null||isNaN(b)||b===0) return null; return (a-b)/Math.abs(b)*100; }
+function devPct(a,b){ if(a==null||b==null||isNaN(a)||isNaN(b)||b===0) return null; return (a-b)/Math.abs(b)*100; }
 function devBps(a,b){ if(a==null||b==null||isNaN(a)||isNaN(b)) return null; return (a-b)*10000; }
 
 function _kpiSparkline(series, budgetSeries, w, h){
@@ -480,7 +486,11 @@ function fmtRangeShort(v, unit){
 function renderKPICards(){
   const el = document.getElementById('kpi-cards-grid');
   el.innerHTML = KPI13.map(ki=>{
-    const A = arr(ki.key);
+    let A = arr(ki.key);
+    // Guard against broken source-Excel formulas producing implausible pct outliers
+    // (e.g. a ratio spiking to -3991% from a near-zero denominator in one month) --
+    // null them out so they don't wreck the sparkline scale or range display.
+    if(ki.unit==='pct') A = A.map(v => (v!=null && Math.abs(v)>5) ? null : v);
     const B = ki.budKey ? barr(ki.budKey) : null;
     const val = A[CUR];
     const valPrev = CUR>0 ? A[CUR-1] : null;
@@ -1352,12 +1362,4 @@ function setupVemoGame(){
   }
   function open(){ overlay.style.display='flex'; drawRoad(); drawPlayer(); }
   function close(){ overlay.style.display='none'; running=false; if(rafId){ cancelAnimationFrame(rafId); rafId=null; } }
-  window.startVemoGame = open;
-  document.getElementById('vg-start').addEventListener('click', ()=>{ reset(); loop(); });
-  document.getElementById('vg-close').addEventListener('click', close);
-  document.addEventListener('keydown', e=>{
-    if(overlay.style.display !== 'flex') return;
-    if(e.key==='ArrowLeft' || e.key==='a'){ player.lane=Math.max(0,player.lane-1); player.targetX=LANES_X[player.lane]; }
-    else if(e.key==='ArrowRight' || e.key==='d'){ player.lane=Math.min(2,player.lane+1); player.targetX=LANES_X[player.lane]; }
-    else if(e.key===' '){ e.preventDefault(); paused=!paused; }
-    else if(e.key==='r' || e.key==='R
+  window.
