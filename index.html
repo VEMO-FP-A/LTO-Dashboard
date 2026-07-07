@@ -479,14 +479,16 @@ footer.foot{margin-top:32px;padding-top:16px;border-top:1px solid var(--b);font-
     <canvas id="vemo-game-canvas" width="320" height="500" style="background:#1a2a2a;border:3px solid #11ABAB;border-radius:10px;display:block"></canvas>
     <div style="color:#fff;font-size:13px;width:200px">
       <div style="font-size:20px;font-weight:800;color:#7BDADA;margin-bottom:8px">🚖 VEMO RACE</div>
-      <div style="color:#9aa3ac;margin-bottom:14px">Esquiva los autos. Cambia de carril.</div>
-      <div style="margin-bottom:10px"><b>Score:</b> <span id="vg-score" style="color:#7BDADA;font-size:18px;font-weight:800">0</span></div>
+      <div style="color:#9aa3ac;margin-bottom:14px">🧍 Recoge pasajeros manejando hacia ellos. 🚗 Esquiva los otros autos.</div>
+      <div style="margin-bottom:10px"><b>Pasajeros:</b> <span id="vg-score" style="color:#7BDADA;font-size:18px;font-weight:800">0</span></div>
       <div style="margin-bottom:10px"><b>Best:</b> <span id="vg-best" style="color:#5dd39e;font-weight:700">0</span></div>
       <div style="margin-bottom:10px"><b>Speed:</b> <span id="vg-speed" style="color:#ff7676;font-weight:700">1x</span></div>
       <hr style="border-color:#353c42;margin:14px 0">
       <div style="font-size:11px;color:#b8c1c8;line-height:1.5">
         <div>← / A · Carril izquierdo</div>
         <div>→ / D · Carril derecho</div>
+        <div>🧍 Toca al pasajero = +1</div>
+        <div>🚗 Chocar con un auto = fin del juego</div>
         <div>Space · Pausa</div>
         <div>R · Reiniciar</div>
       </div>
@@ -784,7 +786,7 @@ footer.foot{margin-top:32px;padding-top:16px;border-top:1px solid var(--b);font-
 
 <footer class="foot">
   <div>VEMO · LTO (VEMO Impulso) · Strictly Private &amp; Confidential</div>
-  <div>build 2026-07-07 16:09</div>
+  <div>build 2026-07-07 16:34</div>
 </footer>
 
 <script>
@@ -2168,9 +2170,18 @@ function makeLineChart(canvasId,label,data,opts){
   }
   if(opts.projection&&main.filter(v=>v!=null).length>=3){
     const proj=new Array(MAX_X).fill(null);
-    const last3=main.slice(LI-2,LI+1).filter(v=>v!=null);
-    const ma=last3.length?last3.reduce((a,b)=>a+b,0)/last3.length:0;
-    for(let i=LI+1;i<Math.min(LI+4,MAX_X);i++) proj[i]=ma;
+    // Ancla en el ultimo mes actual para que la linea punteada arranque exactamente donde
+    // termina la linea solida de actuals (si no, Chart.js deja un hueco entre ambas lineas).
+    if(LI < MAX_X) proj[LI]=main[LI];
+    // Media movil de 3 meses "rolling": cada proyeccion nueva entra al calculo de la siguiente,
+    // asi la 2da proyeccion usa 2 actuals + 1 proyectado, la 3ra usa 1 actual + 2 proyectados, etc.
+    const work=main.slice(0,LI+1);
+    for(let i=LI+1;i<Math.min(LI+4,MAX_X);i++){
+      const last3=work.slice(-3).filter(v=>v!=null);
+      const ma=last3.length?last3.reduce((a,b)=>a+b,0)/last3.length:0;
+      proj[i]=ma;
+      work.push(ma);
+    }
     datasets.push({label:'Projection (3M MA)',data:proj,borderColor:'#7BDADA',backgroundColor:'rgba(123,218,218,0.15)',borderDash:[3,3],fill:false,tension:0.32,borderWidth:1.5,pointRadius:2,pointBackgroundColor:'#7BDADA'});
   }
   let yr=smartYRange(main);
@@ -4879,7 +4890,7 @@ function chatBotAnswer(q){
   // === JUEGO: VEMO RACE ===
   if(/\b(play game|jugar|juego|game|race|vemo race|carros|highway)\b/i.test(lq)){
     setTimeout(() => { try { window.startVemoGame && window.startVemoGame(); } catch(e){} }, 200);
-    return '🎮 <b>VEMO RACE</b> 🚖<br><br>Iniciando el juego... Esquiva los autos cambiando de carril con ← / → (o A / D).<br><br>El juego acelera con cada carro esquivado. Tu mejor score se guarda automáticamente.<br><br>💡 Tip: presiona <kbd>Space</kbd> para pausar, <kbd>R</kbd> para reiniciar, <kbd>Esc</kbd> para cerrar.';
+    return '🎮 <b>VEMO RACE</b> 🚖<br><br>Iniciando el juego... Cambia de carril con ← / → (o A / D) para <b>recoger pasajeros 🧍</b> manejando hacia ellos. Evita chocar con los otros autos 🚗, eso termina el juego.<br><br>Cada pasajero recogido suma 1 punto y el juego acelera. Tu mejor score se guarda automáticamente.<br><br>💡 Tip: presiona <kbd>Space</kbd> para pausar, <kbd>R</kbd> para reiniciar, <kbd>Esc</kbd> para cerrar.';
   }
 
   // === CHISTES SOBRE VEMO / EVs / RIDE-HAILING ===
@@ -5806,14 +5817,20 @@ function setupVemoGame(){
   if(bestEl) bestEl.textContent = best;
   function reset(){
     player = {lane: 1, x: LANES_X[1], targetX: LANES_X[1]};
-    obstacles = []; score = 0; speed = 2.5; speedMult = 1;
+    obstacles = []; popups = []; score = 0; speed = 2.5; speedMult = 1;
     spawnTimer = 0; spawnInterval = 70; paused = false; running = true;
     if(scoreEl) scoreEl.textContent = 0;
     if(speedEl) speedEl.textContent = '1x';
   }
+  let popups = []; // "+1" flotante al recoger un pasajero
   function spawn(){
     const lane = Math.floor(Math.random()*3);
-    obstacles.push({lane, y: -CAR_H, color: ['#ff7676','#ffa94d','#ffd166','#5dd39e','#11ABAB'][Math.floor(Math.random()*5)]});
+    // 45% pasajero (recoger = +1 punto), 55% auto (chocar = fin del juego)
+    if(Math.random() < 0.45){
+      obstacles.push({lane, y: -CAR_H, type:'passenger'});
+    } else {
+      obstacles.push({lane, y: -CAR_H, type:'car', color: ['#ff7676','#ffa94d','#ffd166','#5dd39e','#11ABAB'][Math.floor(Math.random()*5)]});
+    }
   }
   function drawRoad(){
     ctx.fillStyle = '#1a2a2a'; ctx.fillRect(0,0,W,H);
@@ -5830,13 +5847,41 @@ function setupVemoGame(){
     ctx.fillRect(x - CAR_W/2 + 4, y + 8, CAR_W - 8, 16);
     ctx.fillRect(x - CAR_W/2 + 4, y + CAR_H - 22, CAR_W - 8, 14);
   }
+  // Pasajero: figura simple parada en el carril, con mano levantada pidiendo el aventón.
+  function drawPassenger(x, y){
+    const cy = y + CAR_H/2;
+    ctx.save();
+    ctx.fillStyle = 'rgba(0,0,0,0.3)'; ctx.beginPath(); ctx.ellipse(x+2, y+CAR_H-6, 14, 5, 0, 0, Math.PI*2); ctx.fill();
+    // Cuerpo
+    ctx.fillStyle = '#ffd166';
+    ctx.beginPath(); ctx.moveTo(x-9, y+CAR_H-8); ctx.lineTo(x-6, cy); ctx.lineTo(x+6, cy); ctx.lineTo(x+9, y+CAR_H-8); ctx.closePath(); ctx.fill();
+    // Cabeza
+    ctx.fillStyle = '#f2c9a0'; ctx.beginPath(); ctx.arc(x, cy-14, 9, 0, Math.PI*2); ctx.fill();
+    // Brazo levantado (pidiendo aventón)
+    ctx.strokeStyle = '#ffd166'; ctx.lineWidth = 5; ctx.lineCap = 'round';
+    ctx.beginPath(); ctx.moveTo(x+6, cy-4); ctx.lineTo(x+14, cy-20); ctx.stroke();
+    // Maleta
+    ctx.fillStyle = '#11ABAB'; ctx.fillRect(x-14, cy+4, 8, 8);
+    ctx.restore();
+  }
   function drawPlayer(){ drawCar(player.x, H - CAR_H - 18, '#7BDADA'); }
+  function spawnPopup(x, y, text, color){ popups.push({x, y, text, color, life: 32}); }
   function gameOver(){
     running = false;
     if(score > best){ best = score; try { localStorage.setItem('vemo-race-best', best); } catch(e){} if(bestEl) bestEl.textContent = best; }
     ctx.fillStyle = 'rgba(0,0,0,0.75)'; ctx.fillRect(0,0,W,H);
     ctx.fillStyle = '#ff7676'; ctx.font = 'bold 32px sans-serif'; ctx.textAlign = 'center';
     ctx.fillText('CRASH!', W/2, H/2 - 30);
+    ctx.fillStyle = '#fff'; ctx.font = '14px sans-serif';
+    ctx.fillText('🧍 Pasajeros recogidos: ' + score, W/2, H/2 + 6);
+  }
+  function bumpSpeed(){
+    const newMult = 1 + Math.floor(score / 5) * 0.15;
+    if(newMult !== speedMult){
+      speedMult = newMult; speed = 2.5 * speedMult;
+      spawnInterval = Math.max(28, 70 - Math.floor((speedMult-1)*40));
+      if(speedEl) speedEl.textContent = speedMult.toFixed(1) + 'x';
+    }
   }
   function loop(){
     if(!running) return;
@@ -5848,27 +5893,32 @@ function setupVemoGame(){
     if(spawnTimer >= spawnInterval){ spawn(); spawnTimer = 0; }
     obstacles.forEach(o => { o.y += speed; });
     const playerY = H - CAR_H - 18;
-    const passed = obstacles.filter(o => o.y > H);
-    if(passed.length){
-      score += passed.length;
-      if(scoreEl) scoreEl.textContent = score;
-      const newMult = 1 + Math.floor(score / 5) * 0.15;
-      if(newMult !== speedMult){
-        speedMult = newMult; speed = 2.5 * speedMult;
-        spawnInterval = Math.max(28, 70 - Math.floor((speedMult-1)*40));
-        if(speedEl) speedEl.textContent = speedMult.toFixed(1) + 'x';
-      }
-    }
-    obstacles = obstacles.filter(o => o.y <= H);
+    // Recoger pasajeros / chocar con autos (chequeo de colision antes de descartar lo que ya paso)
+    const stillIn = [];
     for(const o of obstacles){
       const ox = LANES_X[o.lane];
-      if(o.y + CAR_H > playerY && o.y < playerY + CAR_H){
-        if(Math.abs(ox - player.x) < CAR_W * 0.85){ gameOver(); return; }
+      const overlaps = (o.y + CAR_H > playerY) && (o.y < playerY + CAR_H) && (Math.abs(ox - player.x) < CAR_W * 0.85);
+      if(overlaps && o.type === 'car'){ gameOver(); return; }
+      if(overlaps && o.type === 'passenger'){
+        score += 1;
+        if(scoreEl) scoreEl.textContent = score;
+        spawnPopup(ox, o.y, '+1 🧍', '#5dd39e');
+        bumpSpeed();
+        continue; // el pasajero recogido desaparece, no se vuelve a dibujar
       }
+      if(o.y <= H) stillIn.push(o); // los que salen de pantalla sin ser recogidos, se pierden sin penalizacion
     }
+    obstacles = stillIn;
+    popups.forEach(p => { p.y -= 1.2; p.life--; });
+    popups = popups.filter(p => p.life > 0);
     drawRoad();
-    obstacles.forEach(o => drawCar(LANES_X[o.lane], o.y, o.color));
+    obstacles.forEach(o => o.type === 'passenger' ? drawPassenger(LANES_X[o.lane], o.y) : drawCar(LANES_X[o.lane], o.y, o.color));
     drawPlayer();
+    popups.forEach(p => {
+      ctx.save(); ctx.globalAlpha = Math.max(0, p.life/32); ctx.fillStyle = p.color;
+      ctx.font = 'bold 16px sans-serif'; ctx.textAlign = 'center';
+      ctx.fillText(p.text, p.x, p.y); ctx.restore();
+    });
     rafId = requestAnimationFrame(loop);
   }
   function open(){ overlay.style.display = 'flex'; drawRoad(); drawPlayer(); }
