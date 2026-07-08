@@ -785,7 +785,7 @@ footer.foot{margin-top:32px;padding-top:16px;border-top:1px solid var(--b);font-
 
 <footer class="foot">
   <div>VEMO · LTO (VEMO Impulso) · Strictly Private &amp; Confidential</div>
-  <div>build 2026-07-08 15:09</div>
+  <div>build 2026-07-08 16:23</div>
 </footer>
 
 <script>
@@ -1075,7 +1075,7 @@ const PL_HIER = [
   {k:'financial_margin', l:'Financial Margin', subtotal:true},
   {margin:true, l:'Financial Margin (%)', n:'financial_margin', d:'net_operating_revenue'},
   {sep:true},
-  {k:'loss_llr_rpsd', l:'LLR + RPSD', invert:true, children:[
+  {k:'loss_llr_rpsd', l:'LLR + RPSD<sup>1</sup>', invert:true, children:[
     {k:'loss_delta_reserve',          l:'Delta Reserve'},
     {k:'loss_reversal_rpsd',          l:'Reversal RPSD'},
     {k:'loss_deposits_unidentified',  l:'Depositos por identificar'},
@@ -1099,7 +1099,7 @@ const PL_HIER = [
   ]},
   {k:'net_operating_revenue', l:'Net Operating Revenue', subtotal:true},
   {sep:true},
-  {k:'cogs_total', l:'OPEX', invert:true, showChildrenAlways:true, children:[
+  {k:'cogs_total', l:'OPEX', subtotal:true, invert:true, showChildrenAlways:true, childrenFirst:true, children:[
     {k:'cogs_maintenance_combined', l:'Maintenance', invert:true, children:[
       {k:'cogs_maintenance',      l:'Maintenance (only)'},
       {k:'cogs_towing',           l:'Towing'},
@@ -1108,7 +1108,7 @@ const PL_HIER = [
     ]},
     {k:'cogs_secondary_sales',  l:'Gain / (Loss) from Secondary Sales'},
   ]},
-  {k:'total_sga', l:'SG&A', subtotal:true, invert:true, showChildrenAlways:true, children:[
+  {k:'total_sga', l:'SG&A', subtotal:true, invert:true, showChildrenAlways:true, childrenFirst:true, children:[
     {k:'sga_direct_business_lines', l:'Direct Business Line', children:[
       {k:'payroll_expense',           l:'Payroll Expense', children:[
         {k:'payroll_wages',      l:'Wages'},
@@ -1150,10 +1150,8 @@ const PL_HIER = [
     {k:'da_furniture',  l:'Furniture and Equipment D&amp;A'},
   ]},
   {k:'ebt', l:'EBT', subtotal:true},
-  {k:'ptu', l:'(-) PTU', invert:true},
-  {k:'participation_subsidiaries', l:'(+/-) Participation in Subsidiaries'},
+  {sep:true},
   {k:'taxes', l:'Taxes', invert:true},
-  {k:'net_income_non_op', l:'(+/-) Net Income (Non-Operating R/(E))'},
   {k:'net_income', l:'Net income', subtotal:true},
   {margin:true, l:'Net Income Margin (%)', n:'net_income', d:'net_operating_revenue'},
   {k:'net_income_ex_corp_cf', l:'Net Income (ex CF &amp; Corp G&amp;A)', subtotal:true},
@@ -1393,8 +1391,11 @@ function buildPLRows(simple){
     const opts = {
       subtotal: line.subtotal,
       invert: line.invert,
-      indent: depth===1,
-      indent2: depth===2,
+      // Cuando se fuerza la visibilidad plana (showAlways/forceShow) no se indenta: deben verse
+      // como filas normales de "componente" (ej. Maintenance, Direct Business Line), igual que
+      // el formato del board deck, no como sub-item anidado.
+      indent: depth===1 && !forceShow,
+      indent2: depth===2 && !forceShow,
       exp: expandable,
       id: id,
       parent: (parentId && !forceShow) ? parentId : null,
@@ -1402,9 +1403,17 @@ function buildPLRows(simple){
     };
     // Apply plViewKey al row key (para EBITDA y net_income)
     const useKey = (typeof plViewKey === 'function') ? plViewKey(line.k) : line.k;
-    rows += rowMm(useKey, line.l, opts);
-    if(hasChildren){
+    // childrenFirst: renderizar los componentes ANTES que la fila total (formato build-up del
+    // board deck: Maintenance / Secondary Sales, luego OPEX; Direct Business Line / Cross Func,
+    // luego SG&A) en vez del orden default (total primero, detalle despues).
+    if(hasChildren && line.childrenFirst){
       for(const c of line.children) emit(c, id, depth+1, showAlways);
+      rows += rowMm(useKey, line.l, opts);
+    } else {
+      rows += rowMm(useKey, line.l, opts);
+      if(hasChildren){
+        for(const c of line.children) emit(c, id, depth+1, showAlways);
+      }
     }
   }
   for(const ln of PL_HIER) emit(ln, null, 0, false);
@@ -2229,6 +2238,7 @@ function makeLineChart(canvasId,label,data,opts){
     fill:'origin',tension:0.32,borderWidth:2,
     pointRadius:2.5,pointBackgroundColor:'#168888',pointBorderColor:'#168888',pointHoverRadius:5
   }];
+  let budgetSeries = null, projSeries = null;
   if(opts.budget&&opts.budget.length&&opts.budget.some(v=>v!=null&&v!==0)){
     let lastB=0; for(let i=0;i<opts.budget.length;i++) if(opts.budget[i]!=null&&opts.budget[i]!==0) lastB=i;
     const maxIdx = Math.min(lastB, MAX_X-1);
@@ -2241,6 +2251,7 @@ function makeLineChart(canvasId,label,data,opts){
       if(i < bud2026Start || i > maxIdx || v == null || v === 0) b.push(null);
       else b.push(v);
     }
+    budgetSeries = b;
     datasets.push({label:'Budget',data:b,borderColor:'#1F5454',backgroundColor:'transparent',borderDash:[6,4],fill:false,tension:0.20,borderWidth:1.5,pointRadius:0,pointHoverRadius:3,spanGaps:false});
   }
   if(opts.projection&&main.filter(v=>v!=null).length>=3){
@@ -2257,9 +2268,14 @@ function makeLineChart(canvasId,label,data,opts){
       proj[i]=ma;
       work.push(ma);
     }
+    projSeries = proj;
     datasets.push({label:'Projection (3M MA)',data:proj,borderColor:'#7BDADA',backgroundColor:'rgba(123,218,218,0.15)',borderDash:[3,3],fill:false,tension:0.32,borderWidth:1.5,pointRadius:2,pointBackgroundColor:'#7BDADA'});
   }
-  let yr=smartYRange(main, opts.isPct ? 'frac' : null);
+  // IMPORTANTE: el eje Y debe considerar TAMBIEN Budget y Projection, no solo Actuals — si no,
+  // cuando el Budget esta muy lejos de los Actuals (ej. muy por arriba), la linea de Budget queda
+  // fuera de rango / pegada al borde y parece que "no hay budget" en el grafico.
+  const combinedForRange = main.concat(budgetSeries||[]).concat(projSeries||[]);
+  let yr=smartYRange(combinedForRange, opts.isPct ? 'frac' : null);
   if(opts.wideY && yr.min !== undefined && yr.max !== undefined){
     yr = {min: 0, max: yr.max};
   }
