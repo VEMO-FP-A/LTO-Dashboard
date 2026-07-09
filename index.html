@@ -785,7 +785,7 @@ footer.foot{margin-top:32px;padding-top:16px;border-top:1px solid var(--b);font-
 
 <footer class="foot">
   <div>VEMO · LTO (VEMO Impulso) · Strictly Private &amp; Confidential</div>
-  <div>build 2026-07-08 18:26</div>
+  <div>build 2026-07-09 10:17</div>
 </footer>
 
 <script>
@@ -1957,7 +1957,7 @@ function renderRatioCharts(containerId, chartDefs){
     if(cd.agg==='eop') val=eop(A,CUR);
     else if(cd.agg==='sum') val=sum(A,CUR,CUR);
     else val=avg(A,CUR,CUR);
-    const fmt = cd.type==='pct' ? (v=>(v*100).toFixed(1)+'%') : (cd.fmt==='int'?fmtInt:(cd.fmt==='k'?(v=>fmtK(v,1)):(v=>fmtN(v,1))));
+    const fmt = cd.type==='pct' ? (v=>(v*100).toFixed(1)+'%') : (cd.fmt==='int'?fmtInt:(cd.fmt==='k'?(v=>fmtCompact(v,1)):(v=>fmtN(v,1))));
     const stat = mlbl(CUR)+': '+fmt(val);
     const B = barrCand(cd.keys || [cd.k]);
     const hasBud = B.length && B.some(v=>v!=null&&v!==0);
@@ -2355,7 +2355,18 @@ function makeLineChart(canvasId,label,data,opts){
       interaction:{intersect:false,mode:'index'},
       plugins:{
         legend:{display:datasets.length>1,position:'bottom',labels:{font:{family:'Space Grotesk',size:10},boxWidth:14,padding:8}},
-        tooltip:{enabled:true}
+        tooltip:{
+          enabled:true,
+          callbacks:{
+            label:function(ctxi){
+              const v = ctxi.parsed.y;
+              if(v==null||isNaN(v)) return ctxi.dataset.label+': —';
+              if(ctxi.dataset.yAxisID==='yMargin') return ctxi.dataset.label+': '+fmtSep(v,1)+'%';
+              if(opts.isPct) return ctxi.dataset.label+': '+fmtSep(v*100,1)+'%';
+              return ctxi.dataset.label+': '+(opts.yfmt?opts.yfmt(v):Math.round(v).toLocaleString());
+            }
+          }
+        }
       },
       scales: scales
     }
