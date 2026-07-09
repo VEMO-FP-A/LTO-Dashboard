@@ -785,7 +785,7 @@ footer.foot{margin-top:32px;padding-top:16px;border-top:1px solid var(--b);font-
 
 <footer class="foot">
   <div>VEMO · LTO (VEMO Impulso) · Strictly Private &amp; Confidential</div>
-  <div>build 2026-07-08 17:34</div>
+  <div>build 2026-07-08 18:26</div>
 </footer>
 
 <script>
@@ -822,12 +822,27 @@ function barr(key){
 function sum(a,s,e){ let t=0; if(!a) return 0; for(let i=Math.max(0,s);i<=Math.min(e,a.length-1);i++) t+=(+a[i]||0); return t; }
 function eop(a,i){ return a&&a[i]!=null?+a[i]:0; }
 function avg(a,s,e){ let t=0,c=0; if(!a) return 0; for(let i=Math.max(0,s);i<=Math.min(e,a.length-1);i++){ if(a[i]!=null){ t+=+a[i]; c++; } } return c?t/c:0; }
-function fmtMm(n){ if(n==null||isNaN(n)) return '—'; const v=n/1e6,a=Math.abs(v); return (v<0?'($':'$')+a.toFixed(1)+(v<0?')':''); }
-function fmtPct(p,d){ d=d==null?1:d; if(p==null||isNaN(p)) return '—'; const a=Math.abs(p); return (p<0?'(':'')+a.toFixed(d)+'%'+(p<0?')':''); }
+// Numero con separador de miles y decimales fijos (base de todo el formateo del dashboard —
+// evita strings ilegibles como "1108841.7k" o "12345.6M" sin comas).
+function fmtSep(n,d){ if(n==null||isNaN(n)) return '—'; d=d==null?1:d; return n.toLocaleString('en-US',{minimumFractionDigits:d,maximumFractionDigits:d}); }
+function fmtMm(n){ if(n==null||isNaN(n)) return '—'; const v=n/1e6,a=Math.abs(v); return (v<0?'($':'$')+fmtSep(a,1)+(v<0?')':''); }
+function fmtPct(p,d){ d=d==null?1:d; if(p==null||isNaN(p)) return '—'; const a=Math.abs(p); return (p<0?'(':'')+fmtSep(a,d)+'%'+(p<0?')':''); }
 function fmtBps(b){ if(b==null||isNaN(b)) return '—'; const a=Math.abs(b); return (b<0?'(':'')+Math.round(a).toLocaleString()+' bps'+(b<0?')':''); }
 function fmtInt(n){ if(n==null||isNaN(n)) return '—'; return Math.round(n).toLocaleString(); }
 function fmtN(n,d){ if(n==null||isNaN(n)) return '—'; return n.toLocaleString('en-US',{minimumFractionDigits:d??1,maximumFractionDigits:d??1}); }
-function fmtK(n,d){ if(n==null||isNaN(n)) return '—'; if(Math.abs(n)>=1000) return (n/1000).toFixed(d??1)+'k'; return n.toFixed(0); }
+function fmtK(n,d){ if(n==null||isNaN(n)) return '—'; if(Math.abs(n)>=1000) return fmtSep(n/1000,d??1)+'k'; return n.toFixed(0); }
+// Formato compacto de 2 niveles (M/k) CON separador de miles en el numero resultante — para
+// ejes de grafico, tooltips y rangos de sparkline. Reemplaza los "toFixed(1)+'M'/'k'" sueltos
+// que no separaban miles cuando el numero seguia siendo grande despues de dividir (ej. un
+// portafolio de $1,108.8M se veia "1108.8M" en vez de "1,108.8M").
+function fmtCompact(v,d){
+  if(v==null||isNaN(v)) return '—';
+  d=d==null?1:d;
+  const a=Math.abs(v), sign=v<0?'-':'';
+  if(a>=1e6) return sign+fmtSep(a/1e6,d)+'M';
+  if(a>=1e3) return sign+fmtSep(a/1e3,d)+'k';
+  return sign+fmtSep(a,d);
+}
 
 const LI = D.last_actual_idx||0;
 const CUR=LI, PREV=LI-1, YOY=LI-12;
@@ -942,7 +957,7 @@ function fmtVal(v,ki){
   if(ki.fmt==='k') return Math.round(v).toLocaleString();
   if(ki.fmt==='n1') return fmtN(v,1);
   if(ki.fmt==='n2') return fmtN(v,2);
-  if(ki.fmt==='mm') return fmtMm(v);
+  if(ki.fmt==='mm') return fmtMm(v)+'M';
   return v.toFixed(1);
 }
 function devPct(a,b){ if(!b||isNaN(b)) return null; return (a-b)/Math.abs(b)*100; }
@@ -1045,9 +1060,9 @@ function renderKPICards(){
           return pct.toFixed(0) + '%';
         }
         const a = Math.abs(v);
-        if(a >= 1e6) return (v/1e6).toFixed(1)+'M';
-        if(a >= 1e3) return (v/1e3).toFixed(0)+'k';
-        if(a >= 100) return Math.round(v).toString();
+        if(a >= 1e6) return (v<0?'-':'')+fmtSep(a/1e6,1)+'M';
+        if(a >= 1e3) return (v<0?'-':'')+fmtSep(a/1e3,0)+'k';
+        if(a >= 100) return Math.round(v).toLocaleString();
         if(a >= 10) return v.toFixed(1);
         return v.toFixed(2);
       }
@@ -1982,7 +1997,7 @@ function renderRatioCharts(containerId, chartDefs){
             interaction:{intersect:false, mode:'index'},
             plugins:{legend:{display:true, position:'bottom', labels:{font:{family:'Space Grotesk',size:11}, boxWidth:14, padding:10}}, tooltip:{enabled:true}},
             scales:{x:{ticks:{font:{family:'Space Grotesk',size:9},color:'#888'},grid:{display:false}},
-              y:{ticks:{font:{family:'Space Grotesk',size:9},color:'#888', callback:function(v){if(Math.abs(v)>=1e3) return (v/1e3).toFixed(1)+'k'; return v;}}, grid:{color:'rgba(0,0,0,0.05)'}}}
+              y:{ticks:{font:{family:'Space Grotesk',size:9},color:'#888', callback:function(v){return fmtCompact(v,1);}}, grid:{color:'rgba(0,0,0,0.05)'}}}
           }
         });
         return;
@@ -2058,9 +2073,9 @@ function _stackedBarHistFactory(cacheKey){
       options:{ responsive:true, maintainAspectRatio:false,
         scales:{ x:{ stacked:true, ticks:{font:{family:'Space Grotesk',size:9.5}} },
                  y:{ stacked:true, ticks:{ font:{family:'Space Grotesk',size:9.5},
-                     callback: v => isPct ? (v*100).toFixed(0)+'%' : v } } },
+                     callback: v => isPct ? (v*100).toFixed(0)+'%' : fmtCompact(v,1) } } },
         plugins:{ legend:{ display:true, position:'bottom', labels:{font:{family:'Space Grotesk',size:10.5}, boxWidth:12, padding:8} },
-          tooltip:{ callbacks:{ label:function(ctxi){ const v=ctxi.parsed.y||0; return ctxi.dataset.label+': '+(isPct?(v*100).toFixed(1)+'%':v); } } } } }
+          tooltip:{ callbacks:{ label:function(ctxi){ const v=ctxi.parsed.y||0; return ctxi.dataset.label+': '+(isPct?(v*100).toFixed(1)+'%':Math.round(v).toLocaleString()); } } } } }
     });
   };
 }
@@ -2239,8 +2254,7 @@ function makeLineChart(canvasId,label,data,opts){
     opts.yfmt = function(v){
       if(v==null||isNaN(v)) return '';
       const a = Math.abs(v);
-      if(a>=1e6) return (v/1e6).toFixed(1)+'M';
-      if(a>=1e3) return (v/1e3).toFixed(1)+'k';
+      if(a>=1e3) return fmtCompact(v,1);
       if(a>=10) return Math.round(v).toLocaleString();
       return v.toFixed(1);
     };
@@ -3123,9 +3137,9 @@ function evaluateFormula(){
     }
     const a = Math.abs(result);
     let fmt;
-    if(a >= 1e6) fmt = (result/1e6).toFixed(2)+'M';
-    else if(a >= 1e3) fmt = (result/1e3).toFixed(2)+'k';
-    else if(a >= 1) fmt = result.toFixed(2);
+    if(a >= 1e6) fmt = (result<0?'-':'')+fmtSep(a/1e6,2)+'M';
+    else if(a >= 1e3) fmt = (result<0?'-':'')+fmtSep(a/1e3,2)+'k';
+    else if(a >= 1) fmt = fmtSep(result,2);
     else fmt = result.toFixed(4);
     resultBox.textContent = fmt;
     const periodLabels = FB_TOKENS.filter(t => t.type === 'kpi').map(t => {
@@ -4016,7 +4030,7 @@ function chatBotAnswer(q){
     const yMin = mn - pad, yMax = mx + pad;
     function xPos(i){ return P + (i*(W-2*P)/(vals.length-1||1)); }
     function yPos(v){ return H - P - ((v-yMin)/(yMax-yMin))*(H-2*P); }
-    function fmt(v){ const a=Math.abs(v); if(a>=1e6) return (v/1e6).toFixed(1)+'M'; if(a>=1e3) return (v/1e3).toFixed(1)+'k'; return v.toFixed(1); }
+    function fmt(v){ return fmtCompact(v,1); }
     let svg = '<svg viewBox="0 0 '+W+' '+H+'" xmlns="http://www.w3.org/2000/svg" style="width:100%;max-width:380px;background:#fafdfd;border-radius:6px;border:1px solid #e8eaed">';
     for(let g=0; g<=3; g++){
       const y = P + g*((H-2*P)/3);
@@ -4318,8 +4332,8 @@ function chatBotAnswer(q){
           curStr = (r.cur*100).toFixed(1)+'%';
           prevStr = (r.prev*100).toFixed(1)+'%';
         } else {
-          curStr = (Math.abs(r.cur)>=1000?(r.cur/1000).toFixed(1)+'k':r.cur.toFixed(1));
-          prevStr = (Math.abs(r.prev)>=1000?(r.prev/1000).toFixed(1)+'k':r.prev.toFixed(1));
+          curStr = fmtCompact(r.cur,1);
+          prevStr = fmtCompact(r.prev,1);
         }
         const arrow = r.delta>=0 ? '▲' : '▼';
         out += (i+1)+'. '+r.ln.l+': '+arrow+' '+fmtPct(r.pct,1)+' ('+curStr+' vs '+prevStr+')\n';
@@ -5225,7 +5239,7 @@ function chatBotAnswer(q){
   if(/costo.+por.+viaje|cost.+per.+trip/i.test(lq)){
     const opex = Math.abs(_v2('cogs_total')), trips = _v2('origination_total');
     if(!trips) return '⚠️ No tengo trips para ' + mlblShort(CUR);
-    return '🚖 <b>Costo por viaje · ' + mlblShort(CUR) + '</b><br>• OPEX total: ' + fmtMm(opex) + 'M<br>• Trips: ' + trips.toLocaleString() + '<br>• <b>Costo/Trip: $' + (opex*1e6/trips).toFixed(2) + ' MXN</b>';
+    return '🚖 <b>Costo por viaje · ' + mlblShort(CUR) + '</b><br>• OPEX total: ' + fmtMm(opex) + 'M<br>• Trips: ' + trips.toLocaleString() + '<br>• <b>Costo/Trip: $' + fmtSep(opex*1e6/trips,2) + ' MXN</b>';
   }
   if(/avg.+leasing.+value|valor.+de.+renta.+promedio/i.test(lq)){
     const alv = _v2('avg_leasing_value');
