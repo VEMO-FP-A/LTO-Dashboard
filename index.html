@@ -785,7 +785,7 @@ footer.foot{margin-top:32px;padding-top:16px;border-top:1px solid var(--b);font-
 
 <footer class="foot">
   <div>VEMO · LTO (VEMO Impulso) · Strictly Private &amp; Confidential</div>
-  <div>build 2026-07-09 10:29</div>
+  <div>build 2026-07-09 11:10</div>
 </footer>
 
 <script>
@@ -850,6 +850,17 @@ const CURY=(D.months[CUR]||'').split('-')[0];
 let YTD_START=0;
 for(let i=0;i<D.months.length;i++){ if(D.months[i]&&D.months[i].startsWith(CURY+'-01')){ YTD_START=i; break; } }
 const YTD_END=CUR;
+
+// Etiqueta "Data through <mes> <anio>" en el subtitulo del header (igual formato que otros
+// dashboards VEMO): usa el ultimo mes con datos reales (CUR), no el ultimo mes del arreglo.
+(function(){
+  const lbl = document.getElementById('data-through-label');
+  if(!lbl) return;
+  const [y,m] = (D.months[CUR]||'').split('-');
+  const MN_FULL = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+  const monthName = MN_FULL[+m-1] || m;
+  lbl.textContent = '📅 Data through ' + monthName + ' ' + y;
+})();
 
 /* TABS */
 document.querySelectorAll('.tab-bar button').forEach(b=>{
