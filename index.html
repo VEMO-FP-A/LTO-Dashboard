@@ -785,7 +785,7 @@ footer.foot{margin-top:32px;padding-top:16px;border-top:1px solid var(--b);font-
 
 <footer class="foot">
   <div>VEMO · LTO (VEMO Impulso) · Strictly Private &amp; Confidential</div>
-  <div>build 2026-07-09 10:17</div>
+  <div>build 2026-07-09 10:29</div>
 </footer>
 
 <script>
@@ -2562,7 +2562,11 @@ function renderEbitdaBridge(){
   // Margen/Revenue: positivo si actual > budget → mejora Net Income
   // Costos (Losses/COGS/Payroll/SG&A/D&A/Taxes): positivo si actual < budget → mejora Net Income
   function varRev(k){ return sA(k) - sB(k); }         // Revenue/margin side
-  function varCost(k){ return sB(k) - sA(k); }         // Cost side: budget - actual (favorable = actual bajo budget)
+  // Cost side: los costos se guardan como negativos (ej. actual=-20.3, budget=-7.0 = perdida
+  // mas grande que lo presupuestado). Favorable = actual - budget > 0 cuando el costo actual
+  // es MENOS negativo que el budget (costo real mas chico); si el costo actual es MAS negativo
+  // (perdida/gasto mayor al budget) el resultado debe ser negativo (desfavorable).
+  function varCost(k){ return sA(k) - sB(k); }
 
   // Steps del bridge:
   //  Start: Net Income Budget
@@ -2676,8 +2680,9 @@ function renderEbitdaBridge(){
       // Custom plugin: dibujar el valor arriba de cada barra
       id: 'ebridgeLabels',
       afterDatasetsDraw(chart){
-        const {ctx, chartArea, scales} = chart;
+        const {ctx, scales} = chart;
         const meta = chart.getDatasetMeta(1);
+        const yScale = scales.y;
         ctx.save();
         ctx.font = 'bold 11px "Space Grotesk", sans-serif';
         ctx.textAlign = 'center';
@@ -2688,13 +2693,17 @@ function renderEbitdaBridge(){
             ? fmtMm(v) + 'M'
             : sign + fmtMm(v) + 'M';
           const cx = bar.x;
-          const barTop = bar.y;
-          const barBot = bar.y + bar.height;
-          const drawY = Math.min(barTop, barBot) - 6;
+          // Posicion en pixeles calculada directo desde la escala Y y los valores de datos
+          // conocidos (bases[i]/tops[i]) — mas confiable que leer bar.y/bar.height, que para
+          // barras "total" con valor negativo (ej. Net Income Budget/Actual, ambos negativos)
+          // podia devolver una altura con signo invertido y dejar el texto fuera del canvas.
+          const pxNear = yScale.getPixelForValue(bases[i]);
+          const pxFar  = yScale.getPixelForValue(bases[i] + tops[i]);
+          const drawY = Math.min(pxNear, pxFar) - 6;
           ctx.fillStyle = steps[i].type === 'total' ? '#fff' : (v >= 0 ? '#117A45' : '#C0392B');
           if(steps[i].type === 'total'){
             // Dibujar dentro de la barra
-            ctx.fillText(txt, cx, (barTop + barBot) / 2 + 4);
+            ctx.fillText(txt, cx, (pxNear + pxFar) / 2 + 4);
           } else {
             ctx.fillText(txt, cx, drawY);
           }
