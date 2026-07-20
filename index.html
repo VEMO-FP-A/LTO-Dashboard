@@ -625,7 +625,6 @@ footer.foot{margin-top:32px;padding-top:16px;border-top:1px solid var(--b);font-
       <button class="active" data-sub="main">Main KPIs</button>
       <button data-sub="main-portfolio">Main Portfolio Metrics</button>
       <button data-sub="main-performance">Main Performance Metrics</button>
-      <button data-sub="credit">Credit &amp; Renewals</button>
       <button data-sub="fin">Financial</button>
     </div>
     <!-- Toggle YTD/Historic movido a debajo de los charts (solo afecta las tablas) -->
@@ -634,7 +633,6 @@ footer.foot{margin-top:32px;padding-top:16px;border-top:1px solid var(--b);font-
   <div class="rsub active" data-sub="main"><div id="rat-main"></div></div>
   <div class="rsub" data-sub="main-portfolio"><div id="rat-portfolio-charts"></div><div id="rat-portfolio-groups"></div><div id="rat-portfolio-flat"></div></div>
   <div class="rsub" data-sub="main-performance"><div id="rat-performance-mix"></div><div id="rat-performance-groups"></div><div id="rat-performance-flat"></div></div>
-  <div class="rsub" data-sub="credit"><div id="rat-credit"></div></div>
   <div class="rsub" data-sub="fin"><div id="rat-fin"></div></div>
 
 
@@ -720,7 +718,7 @@ footer.foot{margin-top:32px;padding-top:16px;border-top:1px solid var(--b);font-
 
 <footer class="foot">
   <div>VEMO · LTO (VEMO Impulso) · Strictly Private &amp; Confidential</div>
-  <div>build 2026-07-20 15:58</div>
+  <div>build 2026-07-20 16:08</div>
 </footer>
 
 <script>
@@ -2200,7 +2198,6 @@ function renderAllRatios(){
   renderRatioExpandable('rat-performance-flat', RATIOS.main_performance_flat,
     '<span style="font-size:14px">Other Performance Metrics</span>');
 
-  renderPair('rat-credit',      RATIOS.credit,      RATIO_CHARTS.credit,      'VEMO Impulso – <b>Credit &amp; Renewals</b>');
   renderPair('rat-fin',         RATIOS.fin,         RATIO_CHARTS.fin,         'VEMO Impulso – <b>Financial Ratios</b>');
 }
 
