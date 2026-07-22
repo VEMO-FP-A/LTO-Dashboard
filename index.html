@@ -809,7 +809,7 @@ footer.foot{margin-top:32px;padding-top:16px;border-top:1px solid var(--b);font-
 
 <footer class="foot">
   <div>VEMO · LTO (VEMO Impulso) · Strictly Private &amp; Confidential</div>
-  <div>build 2026-07-22 11:59</div>
+  <div>build 2026-07-22 12:01</div>
 </footer>
 
 <script>
@@ -2764,26 +2764,26 @@ const RATIO_CHARTS = {
     {k:'renewal_rate_mgmt', l:'Renewal Rate (Mgmt)', type:'pct', agg:'avg'},
   ],
   fin: [
-    {k:'financial_margin', l:'Financial Margin', agg:'sum', fmt:'k', marginKey:'financial_margin_pct', marginLabel:'Fin. Margin %'},
-    {k:'adjusted_financial_margin', l:'Adjusted Financial Margin', agg:'sum', fmt:'k', marginKey:'adjusted_financial_margin_pct', marginLabel:'Adj. Fin. Margin %'},
+    {k:'financial_margin', l:'Financial Margin', agg:'sum', fmt:'k', marginKey:'financial_margin_pct', marginLabel:'Fin. Margin %', fullWidth:true},
+    {k:'adjusted_financial_margin', l:'Adjusted Financial Margin', agg:'sum', fmt:'k', marginKey:'adjusted_financial_margin_pct', marginLabel:'Adj. Fin. Margin %', fullWidth:true},
     {l:'Financial Margin vs Adjusted Financial Margin (incl. Budget)', combined:[
       {k:'financial_margin',                  l:'Financial Margin',              color:'#11ABAB'},
       {k:'budget_financial_margin',            l:'Financial Margin (Budget)',      color:'#11ABAB', dash:true},
       {k:'adjusted_financial_margin',          l:'Adjusted Financial Margin',      color:'#C77DFF'},
       {k:'budget_adjusted_financial_margin',   l:'Adj. Financial Margin (Budget)', color:'#C77DFF', dash:true},
     ]},
-    {k:'nominal_interest_rate_ytd', l:'Nominal Interest Rate YTD (Gross)', type:'pct', agg:'avg'},
-    {k:'nominal_interest_rate_gross', l:'Nominal Interest Rate (Gross)', type:'pct', agg:'avg'},
-    {k:'asset_yield_ytd', l:'Asset Yield YTD', type:'pct', agg:'avg'},
-    {k:'normalized_asset_yield', l:'Normalized Asset Yield', type:'pct', agg:'avg'},
-    {k:'llr_adjustment', l:'LLR Adjustment (Delta LLR %)', type:'pct', agg:'avg'},
-    {k:'loss_llr_rpsd', l:'LLR &amp; RPSD (Delta LLR $)', agg:'sum', fmt:'k'},
-    {k:'adjusted_yield', l:'Adjusted Asset Yield', type:'pct', agg:'avg'},
-    {k:'roe_pct_board', l:'ROE % (Board)', type:'pct', agg:'avg'},
-    {k:'interest_income_per_unit', l:'Interest Income per Active Unit', fmt:'k', agg:'avg'},
-    {k:'ga_pct_income', l:'G&amp;A as % of Revenue', type:'pct', agg:'avg'},
-    {k:'inventory_pct_active_units', l:'Inventory as % of Active Units', type:'pct', agg:'avg'},
-    {k:'inventory_turnover_months', l:'Inventory Turnover (months)', agg:'avg'},
+    {k:'nominal_interest_rate_ytd', l:'Nominal Interest Rate YTD (Gross)', type:'pct', agg:'avg', fullWidth:true},
+    {k:'nominal_interest_rate_gross', l:'Nominal Interest Rate (Gross)', type:'pct', agg:'avg', fullWidth:true},
+    {k:'asset_yield_ytd', l:'Asset Yield YTD', type:'pct', agg:'avg', fullWidth:true},
+    {k:'normalized_asset_yield', l:'Normalized Asset Yield', type:'pct', agg:'avg', fullWidth:true},
+    {k:'llr_adjustment', l:'LLR Adjustment (Delta LLR %)', type:'pct', agg:'avg', fullWidth:true},
+    {k:'loss_llr_rpsd', l:'LLR &amp; RPSD (Delta LLR $)', agg:'sum', fmt:'k', fullWidth:true},
+    {k:'adjusted_yield', l:'Adjusted Asset Yield', type:'pct', agg:'avg', fullWidth:true},
+    {k:'roe_pct_board', l:'ROE % (Board)', type:'pct', agg:'avg', fullWidth:true},
+    {k:'interest_income_per_unit', l:'Interest Income per Active Unit', fmt:'k', agg:'avg', fullWidth:true},
+    {k:'ga_pct_income', l:'G&amp;A as % of Revenue', type:'pct', agg:'avg', fullWidth:true},
+    {k:'inventory_pct_active_units', l:'Inventory as % of Active Units', type:'pct', agg:'avg', fullWidth:true},
+    {k:'inventory_turnover_months', l:'Inventory Turnover (months)', agg:'avg', fullWidth:true},
   ],
 };
 
