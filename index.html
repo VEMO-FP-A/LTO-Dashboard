@@ -210,6 +210,22 @@ body.dark-mode .tgl-btn.active{background:#fff;color:#1F5454}
 .opmet-tbl td.neg,.opmet-tbl td.delta span.neg{color:var(--red)}
 .opmet-tbl td.pos,.opmet-tbl td.delta span.pos{color:var(--teal)}
 .opmet-tbl tr.opmet-subgrp td{background:#eef5f5;color:var(--forest);font-weight:700;font-size:10px;text-transform:uppercase;letter-spacing:0.05em;padding:7px 10px;text-align:left;border-bottom:1px solid var(--b)}
+/* Bloque "Section" vertical (rowspan) estilo board deck de referencia: columna teal solida a
+   la izquierda con el nombre del grupo (ej. "Gross Portfolio"), centrada y en negritas blancas,
+   que abarca todas las filas de su tabla (Total + Technology/Platform/City + sub-items). */
+.opmet-tbl th.opmet-section-hd{background:transparent;border:none;padding:0;width:110px}
+.opmet-tbl td.opmet-section{background:var(--forest);color:#fff;font-weight:700;font-size:12px;
+  text-align:center;vertical-align:middle;padding:14px 10px;width:110px;min-width:110px;
+  line-height:1.35;letter-spacing:0.01em;border-bottom:none;border-right:3px solid var(--teal)}
+/* Fila "cabecera" de sub-grupo (Technology/Platform/City): repite las cifras del Total (son
+   desgloses 100% paralelos, no subtotales secuenciales) -- negrita + fondo tenue para que se
+   distinga de las filas de detalle sin recurrir a una barra divisoria de ancho completo. */
+.opmet-tbl tr.opmet-subhd td{background:#eef5f5;font-weight:700}
+.opmet-tbl tr.opmet-subhd td:first-child{color:var(--forest);text-transform:uppercase;font-size:10.5px;letter-spacing:0.04em}
+.opmet-tbl tr.opmet-total td{background:#f5f9f9}
+body.dark-mode .opmet-tbl td.opmet-section{background:#163f3f;border-right-color:#1F5454}
+body.dark-mode .opmet-tbl tr.opmet-subhd td{background:#243036}
+body.dark-mode .opmet-tbl tr.opmet-total td{background:#22282d}
 
 
 /* === CALCULATOR === */
@@ -739,7 +755,7 @@ footer.foot{margin-top:32px;padding-top:16px;border-top:1px solid var(--b);font-
 
 <footer class="foot">
   <div>VEMO · LTO (VEMO Impulso) · Strictly Private &amp; Confidential</div>
-  <div>build 2026-07-21 18:50</div>
+  <div>build 2026-07-21 22:16</div>
 </footer>
 
 <script>
@@ -1069,8 +1085,18 @@ function renderKPICards(){
     const arrSym=momPct==null?'':(momPct>=0?'▲':'▼');
     const cardCls=isNegBetter(momPct)?'amber':'';
 
-    // Serie para sparkline
-    const spStart = 0;
+    // Serie para sparkline -- arrancar en el primer mes con dato REAL (no en Ene-25 siempre),
+    // asi metricas VRP que solo tienen historia desde Oct-25 no muestran un tramo plano vacio
+    // al inicio del sparkline (mismo criterio que el trim de leading-zeros de los charts grandes).
+    let spStart = 0;
+    {
+      const _probe = [A||[]];
+      if(B && B.length) _probe.push(B);
+      outerSpk:
+      for(let _i=0; _i<=LI; _i++){
+        for(const _pa of _probe){ if(_pa[_i]!=null && _pa[_i]!==0){ spStart=_i; break outerSpk; } }
+      }
+    }
     const spSeries = (A||[]).slice(spStart, LI+1);
     const spBudget = (B && B.length) ? (B||[]).slice(spStart, LI+1) : null;
     const sparkline = _kpiSparkline(spSeries, spBudget, 260, 50);
@@ -1887,10 +1913,11 @@ function renderGroupedExpandable(targetId, groups, sectionTitle){
     const summary = (grp.noTotal? '' : ('<b>'+mlbl(CUR)+': '+fmtVal(valCur,grp)+'</b>' +
                     (valBud? ' · Bud '+fmtVal(valBud,grp)+' (<span class="'+varBudCls+'">'+varBudTxt+'</span>)' : '')));
 
-    // Header de 1 fila: un valor Actual por mes disponible (sin Bud/Δ repetido cada mes,
-    // a diferencia del diseño anterior) + columnas resumen al final: YTD Avg, Budget del
-    // mes actual, y 3 desviaciones (MoM / vs YTD Avg / vs Budget) formato PPT del board.
-    let monthsCols = '<tr><th class="firstcol">Concepto</th>';
+    // Header de 1 fila: columna "Section" en blanco (se llena con el bloque teal vertical del
+    // board deck de referencia via rowspan), luego un valor Actual por mes disponible + columnas
+    // resumen al final: YTD Avg, Budget del mes actual, y 3 desviaciones (MoM / vs YTD Avg /
+    // vs Budget) formato PPT del board.
+    let monthsCols = '<tr><th class="opmet-section-hd"></th><th class="firstcol">Concepto</th>';
     for(let i=RS; i<=RE; i++) monthsCols += '<th>'+mlblShort(i)+'</th>';
     monthsCols += '<th>YTD Avg</th><th>Bud '+mlblShort(CUR)+'</th>'+
       '<th>MoM Δ</th><th>vs YTD Δ</th><th>vs Bud Δ</th></tr>';
@@ -1912,23 +1939,32 @@ function renderGroupedExpandable(targetId, groups, sectionTitle){
       return cells;
     }
 
-    let bodyRows = '';
+    // Construir las filas como lista (no string concatenado) para poder anteponer la celda
+    // "Section" (bloque vertical teal, estilo board deck) con el rowspan correcto en la primera.
+    const rows = [];
     if(!grp.noTotal){
-      bodyRows += '<tr><td><b>Total</b> ('+grp.unit+')</td>'+rowCells(totalA, totalB, grp)+'</tr>';
+      rows.push({html:'<td><b>Total</b> ('+grp.unit+')</td>'+rowCells(totalA, totalB, grp), cls:'opmet-total'});
     }
     let lastSubGrp = null;
     (grp.sub||[]).forEach(sub=>{
       const A = arrCand(sub.keys); if(!A.length) return;
       const B = barrCand(sub.keys);
       const ki = {agg: sub.agg||grp.agg, type: sub.type||grp.type, fmt: sub.fmt||grp.fmt, better: sub.better||grp.better};
-      // Divider de sub-grupo (Technology / Platform / City) — solo si el dato lo trae.
+      // Fila "cabecera" de sub-grupo (Technology / Platform / City) en negrita, reusando los
+      // valores del Total -- estas dimensiones son desgloses 100% paralelos del mismo total
+      // (no subtotales secuenciales), igual que el board deck de referencia (donde la fila
+      // "Technology"/"Platform"/"City" repite las cifras del Total).
       if(sub.grp && sub.grp !== lastSubGrp){
-        const ncols = (RE-RS+1) + 5;
-        bodyRows += '<tr class="opmet-subgrp"><td colspan="'+(ncols+1)+'">'+sub.grp+'</td></tr>';
+        rows.push({html:'<td><b>'+sub.grp+'</b></td>'+rowCells(totalA, totalB, grp), cls:'opmet-subhd'});
         lastSubGrp = sub.grp;
       }
-      bodyRows += '<tr><td style="padding-left:20px">'+sub.l+' ('+(sub.unit||grp.unit)+')</td>'+rowCells(A, B, ki)+'</tr>';
+      rows.push({html:'<td style="padding-left:20px">'+sub.l+' ('+(sub.unit||grp.unit)+')</td>'+rowCells(A, B, ki), cls:''});
     });
+
+    const bodyRows = rows.map((r,ri)=>{
+      const sectionTd = ri===0 ? ('<td class="opmet-section" rowspan="'+rows.length+'">'+grp.l+'</td>') : '';
+      return '<tr'+(r.cls?(' class="'+r.cls+'"'):'')+'>'+sectionTd+r.html+'</tr>';
+    }).join('');
 
     html += '<div class="opmet-row" data-idx="'+idx+'">'+
       '<div class="hd">'+
