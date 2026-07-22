@@ -755,7 +755,7 @@ footer.foot{margin-top:32px;padding-top:16px;border-top:1px solid var(--b);font-
 
 <footer class="foot">
   <div>VEMO · LTO (VEMO Impulso) · Strictly Private &amp; Confidential</div>
-  <div>build 2026-07-21 22:16</div>
+  <div>build 2026-07-21 22:31</div>
 </footer>
 
 <script>
@@ -1621,6 +1621,36 @@ const GROUPS = {
   ],
 };
 
+// Metricas "planas" (una sola fila, o un par de filas simples sin desglose Technology/Platform/
+// City) del board deck de referencia -- migradas al mismo formato de tabla con bloque "Section"
+// vertical que GROUPS.main_portfolio/main_performance, en vez de vivir aparte con el layout
+// viejo de renderRatioExpandable (Actual/Budget/Δ apilados por fila, no por columna).
+// NOTA: cada grupo lleva su propio 'keys' (igual al de su primer/unico sub-item) aunque
+// noTotal:true haga que nunca se dibuje la fila "Total" -- renderGroupedExpandable usa
+// arrCand(grp.keys) como guard-check inicial ("hay data? si no, no dibujar esta tabla") antes
+// de llegar siquiera a mirar noTotal, asi que grp.keys no puede quedar undefined.
+const FLAT_GROUPS_portfolio = [
+  { l:'Asset Yield', unit:'%', type:'pct', agg:'avg', noTotal:true, keys:['vrpm_asset_yield'],
+    sub:[{l:'Portfolio YTD', keys:['vrpm_asset_yield']}] },
+  { l:'Interest Rate', unit:'%', type:'pct', agg:'avg', noTotal:true, keys:['vrpm_nir'],
+    sub:[{l:'Originations', keys:['vrpm_nir']}] },
+  { l:'Collection Rate', unit:'%', type:'pct', agg:'avg', noTotal:true, keys:['vrpm_collection_rate'],
+    sub:[{l:'Total', keys:['vrpm_collection_rate']}] },
+  { l:'Default Rate', unit:'%', type:'pct', agg:'eop', better:'down', noTotal:true, keys:['vrpm_default_rate'],
+    sub:[{l:'Total', keys:['vrpm_default_rate']}] },
+];
+const FLAT_GROUPS_performance = [
+  { l:'Repossessions', unit:'%', type:'pct', agg:'avg', better:'down', noTotal:true, keys:['vrpm_repo_pct'],
+    sub:[{l:'% of Total Fleet', keys:['vrpm_repo_pct']}] },
+  { l:'Used Vehicle Inventory', noTotal:true, keys:['vrpm_uvi_total'],
+    sub:[
+      {l:'Total', keys:['vrpm_uvi_total'], unit:'#', type:'num', fmt:'int', better:'down'},
+      {l:'% of Total Fleet', keys:['vrpm_uvi_pct'], unit:'%', type:'pct', better:'down'},
+    ]},
+  { l:'New Vehicle Inventory', unit:'#', type:'num', agg:'eop', fmt:'int', noTotal:true, keys:['vrpm_nvi_total'],
+    sub:[{l:'Total', keys:['vrpm_nvi_total']}] },
+];
+
 /* ============ RATIOS TABLES (formato VEMO con sub-tabs) ============ */
 // Cada sub-tab: lista de KPI rows
 const RATIOS = {
@@ -2402,18 +2432,18 @@ function renderAllRatios(){
   renderPair('rat-main',        RATIOS.main,        RATIO_CHARTS.main,        'VEMO Impulso – <b>Main KPIs</b>');
 
   // ---- Main Portfolio Metrics (tab nuevo): charts (Net Portfolio/Collection/Growth + Days Past Due) + tablas agrupadas ----
+  // Las metricas "planas" (Asset Yield/Interest Rate/Collection Rate/Default Rate) se agregan
+  // al MISMO arreglo -- asi salen en la misma tabla, con el mismo bloque Section vertical y
+  // columnas (meses + YTD Avg + Budget + MoM/vs YTD/vs Budget) que Gross Portfolio/Active Fleet,
+  // en vez de vivir aparte en un layout distinto (esto es lo que pedia el board deck de referencia).
   renderPortfolioCharts();
-  renderGroupedExpandable('rat-portfolio-groups', GROUPS.main_portfolio,
+  renderGroupedExpandable('rat-portfolio-groups', GROUPS.main_portfolio.concat(FLAT_GROUPS_portfolio),
     'LTO – <b>Main Portfolio Metrics</b> <span style="font-weight:400;font-size:11px;color:var(--tx3)">(Gross Portfolio / Active Fleet: breakdown by Technology · Platform · City, Mar-May 2026 · Days Past Due: full history)</span>');
-  renderRatioExpandable('rat-portfolio-flat', RATIOS.main_portfolio_flat,
-    '<span style="font-size:14px">Other Portfolio Metrics</span>');
 
   // ---- Main Performance Metrics (tab nuevo): Origination Mix charts + tablas agrupadas (Originations, Repos) + metricas sueltas ----
   renderOriginMixCharts();
-  renderGroupedExpandable('rat-performance-groups', GROUPS.main_performance,
+  renderGroupedExpandable('rat-performance-groups', GROUPS.main_performance.concat(FLAT_GROUPS_performance),
     'LTO – <b>Main Performance Metrics</b> <span style="font-weight:400;font-size:11px;color:var(--tx3)">(New Vehicle Originations / Monthly Effective Repossessions: breakdown by Technology · Platform · City, Mar-May 2026)</span>');
-  renderRatioExpandable('rat-performance-flat', RATIOS.main_performance_flat,
-    '<span style="font-size:14px">Other Performance Metrics</span>');
 
   renderPair('rat-fin',         RATIOS.fin,         RATIO_CHARTS.fin,         'VEMO Impulso – <b>Financial Ratios</b>');
 }
