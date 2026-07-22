@@ -227,6 +227,44 @@ body.dark-mode .opmet-tbl td.opmet-section{background:#163f3f;border-right-color
 body.dark-mode .opmet-tbl tr.opmet-subhd td{background:#243036}
 body.dark-mode .opmet-tbl tr.opmet-total td{background:#22282d}
 
+/* ============ HIERARCHICAL TABLE (Main Portfolio / Main Performance Metrics) ============
+   Formato board-deck de referencia: bloque "Section" vertical solido a la izquierda, grupos de
+   columnas Actuals/Budget/Deviation con colores distintos, y scroll horizontal para todos los
+   meses disponibles. */
+.hier-tbl-wrap{overflow-x:auto;margin-bottom:22px}
+.hier-tbl{width:100%;border-collapse:collapse;font-size:12px;font-variant-numeric:tabular-nums;background:var(--sf);border:1px solid var(--b);border-radius:var(--r);overflow:hidden;min-width:max-content}
+.hier-tbl thead tr.hier-grp-row th{padding:7px 11px;font-size:10px;text-align:center;letter-spacing:0.08em;border-bottom:1px solid rgba(255,255,255,0.2);color:#fff}
+.hier-tbl thead tr.hier-grp-row th.hier-grp-act{background:var(--teal)}
+.hier-tbl thead tr.hier-grp-row th.hier-grp-bud{background:#7A5C38}
+.hier-tbl thead tr.hier-grp-row th.hier-grp-dev{background:#2D4A5A}
+.hier-tbl thead tr.hier-sub-row th{background:var(--forest);padding:8px 11px;font-size:10px;border-right:1px solid rgba(255,255,255,0.12);color:#fff;text-transform:uppercase;letter-spacing:0.07em;font-weight:700;text-align:right;white-space:nowrap}
+.hier-tbl thead tr.hier-sub-row th.sub-act{background:#1A8F8F}
+.hier-tbl thead tr.hier-sub-row th.sub-bud{background:#9A7A52}
+.hier-tbl thead tr.hier-sub-row th.sub-dev{background:#3D6070}
+.hier-tbl tbody tr{border-bottom:1px solid #eef3f3}
+.hier-tbl tbody tr.hier-bold{background:#f0f7f7}
+.hier-tbl tbody tr.hier-sub{background:#fff}
+.hier-tbl tbody tr:hover{background:#e8f4f4}
+.hier-tbl td{padding:8px 11px;text-align:right;color:var(--tx);border-right:1px solid #eef3f3}
+.hier-tbl td:last-child{border-right:none}
+.hier-tbl td.hier-sec{background:var(--teal);color:#fff;font-weight:700;font-size:11px;text-align:center;vertical-align:middle;width:90px;min-width:80px;line-height:1.35;border-right:2px solid rgba(0,0,0,0.08)}
+.hier-tbl td.hier-con{text-align:left;font-weight:500;color:var(--forest)}
+.hier-tbl tr.hier-bold td.hier-con{font-weight:700;color:var(--tx)}
+.hier-tbl td.hier-indent{padding-left:22px;color:var(--tx2)}
+.hier-tbl td.hier-unit{color:var(--tx3);font-size:10.5px;text-align:right;white-space:nowrap}
+.hier-tbl td.hier-bud{color:var(--tx3)}
+.hier-tbl td.hier-cur{font-weight:700}
+.hier-tbl td.hier-ytd{color:var(--tx2)}
+.hier-tbl td.neg{color:var(--red);font-weight:600}
+.hier-tbl td.pos{color:var(--teal);font-weight:600}
+.hier-tbl td.na-cell{color:var(--tx3)}
+body.dark-mode .hier-tbl{background:#22282d;border-color:#353c42}
+body.dark-mode .hier-tbl tbody tr.hier-bold{background:#282f35}
+body.dark-mode .hier-tbl tbody tr.hier-sub{background:#22282d}
+body.dark-mode .hier-tbl tbody tr:hover{background:#2b3339}
+body.dark-mode .hier-tbl td{color:#d4dae0;border-right-color:#353c42}
+body.dark-mode .hier-tbl tr.hier-bold td.hier-con{color:#fff}
+
 
 /* === CALCULATOR === */
 .calc-wrap{background:var(--sf);border:1px solid var(--b);border-radius:var(--r);overflow:hidden;margin-bottom:22px;display:grid;grid-template-columns:1fr 1fr;gap:0}
@@ -755,7 +793,7 @@ footer.foot{margin-top:32px;padding-top:16px;border-top:1px solid var(--b);font-
 
 <footer class="foot">
   <div>VEMO · LTO (VEMO Impulso) · Strictly Private &amp; Confidential</div>
-  <div>build 2026-07-21 22:31</div>
+  <div>build 2026-07-21 22:57</div>
 </footer>
 
 <script>
@@ -1537,7 +1575,7 @@ function attachExpHandlers(scopeEl){
 function renderPLVemo(targetId, opts){
   opts=opts||{};
   const tgt=document.getElementById(targetId); if(!tgt) return;
-  const title = opts.title || 'VEMO Impulso – <b>P&L Summary</b>';
+  const title = opts.title || 'LTO – <b>P&L Summary</b>';
   const tblTitle = opts.tblTitle || 'P&L (MXNm)';
   const rows = buildPLRows(!!opts.simple);
   // Note below the table: in Managerial view, 3 Net Income variants are shown (normal, ex
@@ -2015,6 +2053,242 @@ function renderGroupedExpandable(targetId, groups, sectionTitle){
   });
 }
 
+/* ============ HIER TABLE (formato board deck: bloque Section vertical real,
+   Actuals/Budget/Deviation en grupos de columnas de color) ============
+   Implementacion literal del spec dado por el usuario (hierVal/hierBudVal/hierFmt/hierDev/
+   hierYTDAvg/renderHierTable), con 3 adaptaciones minimas y justificadas:
+   1) hierFmt gana un tipo 't==="mm"' (millones de pesos, via fmtMm ya usado en el resto del
+      archivo) ya que el spec original solo cubria 'pct'/'int'/numero plano.
+   2) hierBudVal deriva el key de budget automaticamente ('budget_'+row.k, igual que barrCand())
+      en vez de requerir un campo 'bk' explicito por fila, y trata un 0 literal como "sin dato"
+      (igual que el resto del archivo) para no mostrar un budget de $0/0.0% enganoso.
+   3) hierDev/hierFmt reusan fmtBps/fmtPct/fmtInt/fmtN/fmtMm ya existentes (mismo formato de
+      miles/decimales que el resto del dashboard) en vez de reimplementar el formateo a mano. */
+function hierVal(row, idx){
+  if(!row.k) return null;
+  const arr = D[row.k]||[];
+  return arr[idx]!=null ? arr[idx] : null;
+}
+function hierBudVal(row, idx){
+  if(!row.k) return null;
+  const arr = D['budget_'+row.k] || D[row.k+'_budget'] || [];
+  const v = arr[idx];
+  return (v!=null && v!==0) ? v : null;
+}
+function hierFmt(v, row){
+  if(v==null) return '—';
+  if(row.t==='pct') return fmtPct(v*100,1);
+  if(row.t==='int') return fmtInt(v);
+  if(row.t==='mm') return fmtMm(v)+'M';
+  const dec = row.dec!=null ? row.dec : 1;
+  return fmtN(v,dec);
+}
+function hierDev(vCur, vRef, row){
+  if(vCur==null || vRef==null || vRef===0) return {txt:'—', neg:false, hasVal:false};
+  if(row.t==='pct'){
+    const bps = (vCur - vRef) * 10000;
+    const neg = row.better==='down' ? bps>0 : bps<0;
+    return {txt:fmtBps(bps), neg, hasVal:true};
+  } else {
+    const pct = (vCur - vRef) / Math.abs(vRef) * 100;
+    const neg = row.better==='down' ? pct>0 : pct<0;
+    return {txt:fmtPct(pct,1), neg, hasVal:true};
+  }
+}
+function hierYTDAvg(row){
+  if(!row.k) return null;
+  const arr = D[row.k]||[];
+  const vals=[];
+  for(let i=YTD_START; i<=CUR; i++){
+    const v=arr[i]; if(v!=null) vals.push(v);
+  }
+  return vals.length ? vals.reduce((a,b)=>a+b,0)/vals.length : null;
+}
+function renderHierTable(targetId, hierDef, opts){
+  opts = opts || {};
+  const showYTD = !!opts.showYTD;
+  const tgt = document.getElementById(targetId); if(!tgt) return;
+  const CUR_M = CUR;
+  const PREV_M = CUR_M > 0 ? CUR_M - 1 : null;
+  const curLbl = mlblShort(CUR_M);
+
+  let firstDataIdx = CUR_M;
+  hierDef.forEach(sec => sec.rows.forEach(row => {
+    if(!row.k) return;
+    const arr = D[row.k] || [];
+    for(let i=0; i<=CUR_M; i++){
+      if(arr[i]!=null && arr[i]!==0){ firstDataIdx = Math.min(firstDataIdx, i); break; }
+    }
+  }));
+
+  const nMonths = CUR_M - firstDataIdx + 1;
+  const actCols = nMonths + (showYTD ? 1 : 0);
+  const devCols = showYTD ? 3 : 2;
+
+  const hint = mlblShort(firstDataIdx)+' → '+curLbl;
+  let html = '<div class="opmet-wrap"><div class="opmet-hd"><span class="t">Operational Metrics Table</span><span class="hint">'+hint+'</span></div>';
+  html += '<div class="hier-tbl-wrap"><table class="hier-tbl"><thead>';
+  html += '<tr class="hier-grp-row">';
+  html += '<th rowspan="2" style="text-align:left;vertical-align:bottom;background:var(--forest)">Section</th>';
+  html += '<th rowspan="2" style="text-align:left;vertical-align:bottom;background:var(--forest)">Concept</th>';
+  html += '<th rowspan="2" style="vertical-align:bottom;background:var(--forest)">Units</th>';
+  html += '<th colspan="'+actCols+'" class="hier-grp-act">Actuals</th>';
+  html += '<th colspan="1" class="hier-grp-bud">Budget</th>';
+  html += '<th colspan="'+devCols+'" class="hier-grp-dev">Deviation vs. '+curLbl+' (%)</th>';
+  html += '</tr>';
+  html += '<tr class="hier-sub-row">';
+  for(let i=firstDataIdx; i<=CUR_M; i++){
+    html += '<th class="sub-act"'+(i===CUR_M?' style="font-weight:800"':'')+'>'+mlblShort(i)+'</th>';
+  }
+  if(showYTD) html += '<th class="sub-act">YTD Avg.</th>';
+  html += '<th class="sub-bud">Budget '+curLbl+'</th>';
+  html += '<th class="sub-dev">MoM</th>';
+  if(showYTD) html += '<th class="sub-dev">Vs. YTD Avg</th>';
+  html += '<th class="sub-dev">Vs. Budget</th>';
+  html += '</tr></thead><tbody>';
+
+  hierDef.forEach(section=>{
+    const nRows = section.rows.length;
+    section.rows.forEach((row, ri)=>{
+      const vPrev = PREV_M!=null ? hierVal(row, PREV_M) : null;
+      const vCur  = hierVal(row, CUR_M);
+      const vYTD  = showYTD ? hierYTDAvg(row) : null;
+      const vBud  = hierBudVal(row, CUR_M);
+      const mom   = hierDev(vCur, vPrev, row);
+      const vsYTD = showYTD ? hierDev(vCur, vYTD, row) : null;
+      const vsb   = hierDev(vCur, vBud, row);
+      html += '<tr class="'+(row.bold?'hier-bold':'hier-sub')+'">';
+      if(ri===0) html += '<td class="hier-sec" rowspan="'+nRows+'">'+section.sec.replace(/\n/g,'<br>')+'</td>';
+      html += '<td class="hier-con'+(row.bold?'':' hier-indent')+'">'+row.l+'</td>';
+      html += '<td class="hier-unit">'+row.unit+'</td>';
+      for(let i=firstDataIdx; i<=CUR_M; i++){
+        const v = hierVal(row, i);
+        html += '<td'+(i===CUR_M?' class="hier-cur"':'')+'>'+
+          (v!=null ? hierFmt(v,row) : '—')+'</td>';
+      }
+      if(showYTD) html += '<td class="hier-ytd">'+(vYTD!=null?hierFmt(vYTD,row):'—')+'</td>';
+      html += '<td class="hier-bud">'+(vBud!=null?hierFmt(vBud,row):'—')+'</td>';
+      html += '<td class="'+(mom.hasVal?(mom.neg?'neg':'pos'):'na-cell')+'">'+mom.txt+'</td>';
+      if(showYTD && vsYTD) html += '<td class="'+(vsYTD.hasVal?(vsYTD.neg?'neg':'pos'):'na-cell')+'">'+vsYTD.txt+'</td>';
+      html += '<td class="'+(vsb.hasVal?(vsb.neg?'neg':'pos'):'na-cell')+'">'+vsb.txt+'</td>';
+      html += '</tr>';
+    });
+  });
+  html += '</tbody></table></div></div>';
+  tgt.insertAdjacentHTML('beforeend', html);
+}
+
+// hierDef de Gross Portfolio/Active Fleet/Days Past Due + metricas planas (Asset Yield,
+// Interest Rate, Collection Rate, Default Rate) para el tab "Main Portfolio Metrics".
+// Las filas "Technology"/"Platform"/"City" repiten el key del Total (mismo patron ya
+// verificado contra el board deck de referencia: son 3 desgloses 100% paralelos del mismo
+// total, no subtotales secuenciales).
+const HIER_portfolio = [
+  { sec:'Gross\nPortfolio', rows:[
+    {l:'Total',        k:'vrpm_gross_portfolio_total', unit:'MXNm', t:'mm', bold:true, better:'up'},
+    {l:'Technology',    k:'vrpm_gross_portfolio_total', unit:'MXNm', t:'mm', bold:true, better:'up'},
+    {l:'EV',            k:'vrpm_gp_ev',  unit:'MXNm', t:'mm', better:'up'},
+    {l:'ICE',           k:'vrpm_gp_ice', unit:'MXNm', t:'mm', better:'up'},
+    {l:'HEV',           k:'vrpm_gp_hev', unit:'MXNm', t:'mm', better:'up'},
+    {l:'Platform',      k:'vrpm_gross_portfolio_total', unit:'MXNm', t:'mm', bold:true, better:'up'},
+    {l:'Uber',          k:'vrpm_gp_uber', unit:'MXNm', t:'mm', better:'up'},
+    {l:'Didi',          k:'vrpm_gp_didi', unit:'MXNm', t:'mm', better:'up'},
+    {l:'City',          k:'vrpm_gross_portfolio_total', unit:'MXNm', t:'mm', bold:true, better:'up'},
+    {l:'CDMX',          k:'vrpm_gp_cdmx', unit:'MXNm', t:'mm', better:'up'},
+    {l:'Guadalajara',   k:'vrpm_gp_gdl',  unit:'MXNm', t:'mm', better:'up'},
+    {l:'Monterrey',     k:'vrpm_gp_mty',  unit:'MXNm', t:'mm', better:'up'},
+    {l:'Tijuana',       k:'vrpm_gp_tij',  unit:'MXNm', t:'mm', better:'up'},
+    {l:'Queretaro',     k:'vrpm_gp_qro',  unit:'MXNm', t:'mm', better:'up'},
+  ]},
+  { sec:'Active\nFleet', rows:[
+    {l:'Total',        k:'vrpm_active_fleet_total', unit:'#', t:'int', bold:true, better:'up'},
+    {l:'Technology',    k:'vrpm_active_fleet_total', unit:'#', t:'int', bold:true, better:'up'},
+    {l:'EV',            k:'vrpm_af_ev',  unit:'#', t:'int', better:'up'},
+    {l:'ICE',           k:'vrpm_af_ice', unit:'#', t:'int', better:'up'},
+    {l:'HEV',           k:'vrpm_af_hev', unit:'#', t:'int', better:'up'},
+    {l:'Platform',      k:'vrpm_active_fleet_total', unit:'#', t:'int', bold:true, better:'up'},
+    {l:'Uber',          k:'vrpm_af_uber', unit:'#', t:'int', better:'up'},
+    {l:'Didi',          k:'vrpm_af_didi', unit:'#', t:'int', better:'up'},
+    {l:'City',          k:'vrpm_active_fleet_total', unit:'#', t:'int', bold:true, better:'up'},
+    {l:'CDMX',          k:'vrpm_af_cdmx', unit:'#', t:'int', better:'up'},
+    {l:'Guadalajara',   k:'vrpm_af_gdl',  unit:'#', t:'int', better:'up'},
+    {l:'Monterrey',     k:'vrpm_af_mty',  unit:'#', t:'int', better:'up'},
+    {l:'Tijuana',       k:'vrpm_af_tij',  unit:'#', t:'int', better:'up'},
+    {l:'Queretaro',     k:'vrpm_af_qro',  unit:'#', t:'int', better:'up'},
+  ]},
+  { sec:'Asset\nYield', rows:[
+    {l:'Portfolio YTD', k:'vrpm_asset_yield', unit:'%', t:'pct', bold:true, better:'up'},
+  ]},
+  { sec:'Interest\nRate', rows:[
+    {l:'Originations', k:'vrpm_nir', unit:'%', t:'pct', bold:true, better:'up'},
+  ]},
+  { sec:'Collection\nRate', rows:[
+    {l:'Total', k:'vrpm_collection_rate', unit:'%', t:'pct', bold:true, better:'up'},
+  ]},
+  { sec:'Default\nRate', rows:[
+    {l:'Total', k:'vrpm_default_rate', unit:'%', t:'pct', bold:true, better:'down'},
+  ]},
+];
+
+// "Days Past Due" vive en su PROPIA tabla/hierDef, separada de HIER_portfolio: sus keys
+// (bucket_14/60/61plus) vienen del Excel de Financials y tienen historia real completa desde
+// Ene-25, mientras que TODO lo demas en HIER_portfolio (Gross Portfolio/Active Fleet/Asset
+// Yield/Interest Rate/Collection Rate/Default Rate) viene del archivo VRP KPIs y solo tiene
+// datos reales desde Oct-25 -- si se mezclan en la misma tabla, el "firstDataIdx" compartido
+// (una sola fila de encabezado de meses para toda la tabla) se arrastra hasta Ene-25 y vuelve a
+// mostrar columnas "$0.0M" vacias en Gross Portfolio/Active Fleet, exactamente el defecto de
+// "graficos/tablas sin recortar desde donde hay informacion" que el usuario senalo repetidas
+// veces. Separarla en su propia llamada a renderHierTable evita ese arrastre.
+const HIER_portfolio_dpd = [
+  { sec:'Days Past\nDue', rows:[
+    {l:'Up to 14 Days', k:'bucket_14',      unit:'%', t:'pct', better:'down'},
+    {l:'Up to 60 Days', k:'bucket_60',      unit:'%', t:'pct', better:'down'},
+    {l:'+61 Days',      k:'bucket_61plus',  unit:'%', t:'pct', better:'down'},
+  ]},
+];
+
+// hierDef de New Vehicle Originations/Monthly Effective Repossessions + metricas planas
+// (Repossessions %, Used/New Vehicle Inventory) para el tab "Main Performance Metrics".
+const HIER_performance = [
+  { sec:'New Vehicle\nOriginations', rows:[
+    {l:'Total',      k:'vrpm_orig_new_total', unit:'#', t:'int', bold:true, better:'up'},
+    {l:'Technology',  k:'vrpm_orig_new_total', unit:'#', t:'int', bold:true, better:'up'},
+    {l:'ICE',         k:'vrpm_orig_new_ice', unit:'#', t:'int', better:'up'},
+    {l:'HEV',         k:'vrpm_orig_new_hev', unit:'#', t:'int', better:'up'},
+    {l:'EV',          k:'vrpm_orig_new_ev',  unit:'#', t:'int', better:'up'},
+    {l:'Platform',    k:'vrpm_orig_new_total', unit:'#', t:'int', bold:true, better:'up'},
+    {l:'Uber',        k:'vrpm_orig_new_uber', unit:'#', t:'int', better:'up'},
+    {l:'Didi',        k:'vrpm_orig_new_didi', unit:'#', t:'int', better:'up'},
+  ]},
+  { sec:'Monthly Effective\nRepossessions', rows:[
+    {l:'Total',       k:'vrpm_repo_total', unit:'#', t:'int', bold:true, better:'down'},
+    {l:'Technology',   k:'vrpm_repo_total', unit:'#', t:'int', bold:true, better:'down'},
+    {l:'EV Light',     k:'vrpm_repo_ev_light',   unit:'#', t:'int', better:'down'},
+    {l:'EV Premium',   k:'vrpm_repo_ev_premium', unit:'#', t:'int', better:'down'},
+    {l:'ICE',          k:'vrpm_repo_ice', unit:'#', t:'int', better:'down'},
+    {l:'HEV',          k:'vrpm_repo_hev', unit:'#', t:'int', better:'down'},
+    {l:'Platform',     k:'vrpm_repo_total', unit:'#', t:'int', bold:true, better:'down'},
+    {l:'Uber',         k:'vrpm_repo_uber', unit:'#', t:'int', better:'down'},
+    {l:'Didi',         k:'vrpm_repo_didi', unit:'#', t:'int', better:'down'},
+    {l:'City',         k:'vrpm_repo_total', unit:'#', t:'int', bold:true, better:'down'},
+    {l:'CDMX',         k:'vrpm_repo_cdmx', unit:'#', t:'int', better:'down'},
+    {l:'Guadalajara',  k:'vrpm_repo_gdl',  unit:'#', t:'int', better:'down'},
+    {l:'Monterrey',    k:'vrpm_repo_mty',  unit:'#', t:'int', better:'down'},
+    {l:'Tijuana',      k:'vrpm_repo_tij',  unit:'#', t:'int', better:'down'},
+    {l:'Queretaro',    k:'vrpm_repo_qro',  unit:'#', t:'int', better:'down'},
+  ]},
+  { sec:'Repossessions\n(% Fleet)', rows:[
+    {l:'% of Total Fleet', k:'vrpm_repo_pct', unit:'%', t:'pct', bold:true, better:'down'},
+  ]},
+  { sec:'Used Vehicle\nInventory', rows:[
+    {l:'Total',            k:'vrpm_uvi_total', unit:'#', t:'int', bold:true, better:'down'},
+    {l:'% of Total Fleet', k:'vrpm_uvi_pct',   unit:'%', t:'pct', better:'down'},
+  ]},
+  { sec:'New Vehicle\nInventory', rows:[
+    {l:'Total', k:'vrpm_nvi_total', unit:'#', t:'int', bold:true, better:'up'},
+  ]},
+];
+
 // Charts cyan area por sub-tab (los del original con el formato nuevo)
 function renderRatioCharts(containerId, chartDefs){
   const root = document.getElementById(containerId);
@@ -2437,13 +2711,24 @@ function renderAllRatios(){
   // columnas (meses + YTD Avg + Budget + MoM/vs YTD/vs Budget) que Gross Portfolio/Active Fleet,
   // en vez de vivir aparte en un layout distinto (esto es lo que pedia el board deck de referencia).
   renderPortfolioCharts();
-  renderGroupedExpandable('rat-portfolio-groups', GROUPS.main_portfolio.concat(FLAT_GROUPS_portfolio),
-    'LTO – <b>Main Portfolio Metrics</b> <span style="font-weight:400;font-size:11px;color:var(--tx3)">(Gross Portfolio / Active Fleet: breakdown by Technology · Platform · City, Mar-May 2026 · Days Past Due: full history)</span>');
+  {
+    const tgt = document.getElementById('rat-portfolio-groups');
+    if(tgt){
+      tgt.innerHTML = '<div class="vemo-section-title">LTO – <b>Main Portfolio Metrics</b></div>';
+      renderHierTable('rat-portfolio-groups', HIER_portfolio, {showYTD:true});
+      renderHierTable('rat-portfolio-groups', HIER_portfolio_dpd, {showYTD:true});
+    }
+  }
 
   // ---- Main Performance Metrics (tab nuevo): Origination Mix charts + tablas agrupadas (Originations, Repos) + metricas sueltas ----
   renderOriginMixCharts();
-  renderGroupedExpandable('rat-performance-groups', GROUPS.main_performance.concat(FLAT_GROUPS_performance),
-    'LTO – <b>Main Performance Metrics</b> <span style="font-weight:400;font-size:11px;color:var(--tx3)">(New Vehicle Originations / Monthly Effective Repossessions: breakdown by Technology · Platform · City, Mar-May 2026)</span>');
+  {
+    const tgt = document.getElementById('rat-performance-groups');
+    if(tgt){
+      tgt.innerHTML = '<div class="vemo-section-title">LTO – <b>Main Performance Metrics</b></div>';
+      renderHierTable('rat-performance-groups', HIER_performance, {showYTD:true});
+    }
+  }
 
   renderPair('rat-fin',         RATIOS.fin,         RATIO_CHARTS.fin,         'VEMO Impulso – <b>Financial Ratios</b>');
 }
@@ -6165,8 +6450,8 @@ function renderComparator(){
         document.querySelectorAll('#pl-view-toggle button').forEach(function(x){x.classList.remove('active');});
         b.classList.add('active');
         PL_VIEW = b.dataset.view;
-        try { renderPLVemo('pl-vemo',{simple:true,title:'VEMO Impulso – <b>P&L Summary (' + (PL_VIEW==='managerial'?'Managerial':'Accounting') + ')</b>'}); } catch(e){ console.warn(e); }
-        try { renderPLVemo('pl-vemo-detail',{simple:false,title:'VEMO Impulso – <b>P&L Summary (' + (PL_VIEW==='managerial'?'Managerial':'Accounting') + ')</b>'}); } catch(e){ console.warn(e); }
+        try { renderPLVemo('pl-vemo',{simple:true,title:'LTO – <b>P&L Summary (' + (PL_VIEW==='managerial'?'Managerial':'Accounting') + ')</b>'}); } catch(e){ console.warn(e); }
+        try { renderPLVemo('pl-vemo-detail',{simple:false,title:'LTO – <b>P&L Summary (' + (PL_VIEW==='managerial'?'Managerial':'Accounting') + ')</b>'}); } catch(e){ console.warn(e); }
         try { renderPLCharts(); } catch(e){ console.warn(e); }
         try { renderPLBridge(); } catch(e){ console.warn(e); }
         try { renderKPICards(); } catch(e){ console.warn(e); }
@@ -6184,7 +6469,7 @@ function renderComparator(){
     if(t){
       t.addEventListener('change', function(){
         PL_SHOW_HISTORIC = t.checked;
-        try { renderPLVemo('pl-vemo-detail',{simple:false,title:'VEMO Impulso – <b>P&L Summary</b>'}); } catch(e){ console.warn(e); }
+        try { renderPLVemo('pl-vemo-detail',{simple:false,title:'LTO – <b>P&L Summary</b>'}); } catch(e){ console.warn(e); }
       });
     }
   }
@@ -6200,7 +6485,7 @@ function renderComparator(){
         document.querySelectorAll('#pl-period-toggle button').forEach(function(x){x.classList.remove('active');});
         b.classList.add('active');
         PL_PERIOD_MODE = b.dataset.period;
-        try { renderPLVemo('pl-vemo-detail',{simple:false,title:'VEMO Impulso – <b>P&L Summary</b>'}); } catch(e){ console.warn(e); }
+        try { renderPLVemo('pl-vemo-detail',{simple:false,title:'LTO – <b>P&L Summary</b>'}); } catch(e){ console.warn(e); }
       });
     });
   }
@@ -6283,11 +6568,11 @@ function init(){
   try { renderAlerts(); } catch(e){ console.warn('renderAlerts',e); }
   try { renderKPICards(); } catch(e){ console.warn('renderKPICards',e); }
   try { renderExecKpiChart(); } catch(e){ console.warn('renderExecKpiChart',e); }
-  try { renderPLVemo('pl-vemo',{simple:true,title:'VEMO Impulso – <b>P&L Summary</b>'}); } catch(e){ console.warn('renderPLVemo simple',e); }
+  try { renderPLVemo('pl-vemo',{simple:true,title:'LTO – <b>P&L Summary</b>'}); } catch(e){ console.warn('renderPLVemo simple',e); }
   try { renderAllRatios(); } catch(e){ console.warn('renderAllRatios',e); }
   try { setupCalc(); } catch(e){ console.warn('setupCalc',e); }
   try { setupChat(); } catch(e){ console.warn('setupChat',e); }
-  try { renderPLVemo('pl-vemo-detail',{simple:false,title:'VEMO Impulso – <b>P&L Summary</b>'}); } catch(e){ console.warn('renderPLVemo detail',e); }
+  try { renderPLVemo('pl-vemo-detail',{simple:false,title:'LTO – <b>P&L Summary</b>'}); } catch(e){ console.warn('renderPLVemo detail',e); }
   try { renderPLBridge(); } catch(e){ console.warn('renderPLBridge',e); }
   try { renderEbitdaBridge(); } catch(e){ console.warn('renderEbitdaBridge',e); }
   try { renderPLCharts(); } catch(e){ console.warn('renderPLCharts',e); }
