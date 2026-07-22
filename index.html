@@ -133,6 +133,12 @@ body.dark-mode .kpi-spark svg path[stroke="#1F5454"]{stroke:#9aa3ac!important}
 .chart-toggles label{font-size:10px;color:rgba(255,255,255,0.85);display:flex;align-items:center;gap:4px;cursor:pointer;letter-spacing:0.03em}
 .chart-toggles input{accent-color:var(--mint);transform:scale(0.9)}
 .chart-body{padding:12px 14px;height:240px;position:relative}
+/* Pill-style segmented toggle (replaces plain checkboxes for Budget/Forecast/period switches) */
+.tgl-group{display:inline-flex;background:rgba(0,0,0,0.26);border-radius:999px;padding:3px;gap:2px;flex-shrink:0}
+.tgl-btn{border:none;background:transparent;color:rgba(255,255,255,0.68);font-family:'Space Grotesk',sans-serif;font-size:10px;font-weight:600;letter-spacing:0.02em;padding:5px 12px;border-radius:999px;cursor:pointer;transition:background 0.15s,color 0.15s;white-space:nowrap;line-height:1.2}
+.tgl-btn:hover{color:#fff}
+.tgl-btn.active{background:#fff;color:var(--forest)}
+body.dark-mode .tgl-btn.active{background:#fff;color:#1F5454}
 
 /* Variation filters */
 .var-filters{display:flex;align-items:center;gap:10px;background:var(--sf);border:1px solid var(--b);border-radius:var(--r);padding:11px 14px;margin-bottom:16px;flex-wrap:wrap}
@@ -604,8 +610,10 @@ footer.foot{margin-top:32px;padding-top:16px;border-top:1px solid var(--b);font-
       <span class="t">Trend Overview</span>
       <select id="exec-kpi-picker" style="margin-left:auto;font-family:inherit;font-size:11px;padding:5px 10px;border:1px solid rgba(255,255,255,0.30);background:rgba(255,255,255,0.10);color:#fff;border-radius:5px;cursor:pointer;font-weight:600"></select>
       <div class="chart-toggles">
-        <label><input type="checkbox" id="exec-kpi-bud" checked> Budget</label>
-        <label><input type="checkbox" id="exec-kpi-proj"> Forecast</label>
+        <div class="tgl-group">
+          <button type="button" class="tgl-btn active" id="exec-kpi-bud" data-on="1">Budget</button>
+          <button type="button" class="tgl-btn" id="exec-kpi-proj" data-on="0">Forecast</button>
+        </div>
         <span style="font-size:9.5px;color:rgba(255,255,255,0.75);font-style:italic;margin-left:4px">Forecast = 3-month moving average</span>
       </div>
     </div>
@@ -657,8 +665,10 @@ footer.foot{margin-top:32px;padding-top:16px;border-top:1px solid var(--b);font-
     <div class="chart-hd">
       <span class="t">Net Income Budget → Net Income Actual · <span id="ebridge-period"></span> · <span id="ebridge-variance"></span></span>
       <div class="chart-toggles">
-        <label><input type="radio" name="ebridge-mode" value="cur" checked> Current month</label>
-        <label><input type="radio" name="ebridge-mode" value="ytd"> YTD</label>
+        <div class="tgl-group" id="ebridge-mode-group">
+          <button type="button" class="tgl-btn active" data-mode="cur">Current month</button>
+          <button type="button" class="tgl-btn" data-mode="ytd">YTD</button>
+        </div>
       </div>
     </div>
     <div class="chart-body" style="height:360px"><canvas id="ebitda-bridge"></canvas></div>
@@ -729,7 +739,7 @@ footer.foot{margin-top:32px;padding-top:16px;border-top:1px solid var(--b);font-
 
 <footer class="foot">
   <div>VEMO · LTO (VEMO Impulso) · Strictly Private &amp; Confidential</div>
-  <div>build 2026-07-21 15:45</div>
+  <div>build 2026-07-21 18:08</div>
 </footer>
 
 <script>
@@ -1962,10 +1972,10 @@ function renderRatioCharts(containerId, chartDefs){
     const hasBud = B.length && B.some(v=>v!=null&&v!==0);
     html += '<div class="chart-card">'+
       '<div class="chart-hd"><span class="t">'+cd.l+'</span><span class="stats">'+stat+'</span>'+
-      '<div class="chart-toggles">'+
-        (hasBud ? '<label><input type="checkbox" data-toggle="bud" data-card="'+containerId+'-c'+i+'" checked> Budget</label>' : '')+
-        '<label><input type="checkbox" data-toggle="proj" data-card="'+containerId+'-c'+i+'"> Forecast</label>'+
-      '</div></div>'+
+      '<div class="chart-toggles"><div class="tgl-group">'+
+        (hasBud ? '<button type="button" class="tgl-btn active" data-toggle="bud" data-card="'+containerId+'-c'+i+'">Budget</button>' : '')+
+        '<button type="button" class="tgl-btn" data-toggle="proj" data-card="'+containerId+'-c'+i+'">Forecast</button>'+
+      '</div></div></div>'+
       '<div class="chart-body"><canvas id="'+containerId+'-c'+i+'"></canvas></div></div>';
   });
   html += '</div>';
@@ -2011,8 +2021,8 @@ function renderRatioCharts(containerId, chartDefs){
       const yfmt = cd.type==='pct' ? (v=>(v*100).toFixed(0)+'%') : (cd.fmt==='int'?(v=>v.toLocaleString()):undefined);
       const canvasId = containerId+'-c'+i;
       const card = document.getElementById(canvasId)?.closest('.chart-card');
-      const showBud = card?.querySelector('[data-toggle="bud"]')?.checked ?? false;
-      const showProj = card?.querySelector('[data-toggle="proj"]')?.checked ?? false;
+      const showBud = card?.querySelector('[data-toggle="bud"]')?.classList.contains('active') ?? false;
+      const showProj = card?.querySelector('[data-toggle="proj"]')?.classList.contains('active') ?? false;
       // Segundo eje % (derecha): para charts que definen marginKey (ej. Financial Margin /
       // Adjusted Financial Margin), superponer su linea de margen % ya calculada.
       let mArr = null;
@@ -2029,10 +2039,10 @@ function renderRatioCharts(containerId, chartDefs){
     } catch(e){ console.warn('chart render failed', cd.l, e); }
   }
   chartDefs.forEach((cd,i)=> buildChart(cd, i));
-  root.querySelectorAll('input[type=checkbox]').forEach(cb=>{
-    cb.addEventListener('change',()=>{
-      const cardId = cb.dataset.card;
-      // find which index
+  root.querySelectorAll('.tgl-btn[data-toggle]').forEach(btn=>{
+    btn.addEventListener('click',()=>{
+      btn.classList.toggle('active');
+      const cardId = btn.dataset.card;
       chartDefs.forEach((cd,i)=>{ if(containerId+'-c'+i === cardId) buildChart(cd, i); });
     });
   });
@@ -2096,6 +2106,31 @@ function _stackedBarHistFactory(cacheKey){
 function _histLabels(){ const L=[]; for(let i=0;i<=LI;i++) L.push(mlblShort(i)); return L; }
 function _histSlice(key){ const A = arr(key); const L=_histLabels(); return L.map((_,idx)=> A[idx]||0); }
 
+// Multi-line chart acotado al historico real (sin cushion de meses vacios) -- para desgloses
+// (Technology/Platform/City) que no llevan su propio toggle de Budget/Forecast, solo actuals.
+function _multiLineHistChart(canvasId, seriesDefs, cacheKey){
+  cacheKey = cacheKey || '__multiLineHist';
+  const ctx = document.getElementById(canvasId); if(!ctx) return;
+  window[cacheKey] = window[cacheKey] || {};
+  if(window[cacheKey][canvasId]){ try{ window[cacheKey][canvasId].destroy(); }catch(e){} }
+  const labels = _histLabels();
+  const datasets = seriesDefs.map(s => ({
+    label: deent(s.l), data: _histSlice(s.k),
+    borderColor: s.color, backgroundColor: s.color+'22',
+    fill:false, tension:0.32, borderWidth:2,
+    pointRadius:2, pointBackgroundColor:s.color, pointBorderColor:s.color, pointHoverRadius:5
+  }));
+  window[cacheKey][canvasId] = new Chart(ctx, {
+    type:'line', data:{labels, datasets},
+    options:{responsive:true, maintainAspectRatio:false,
+      interaction:{intersect:false, mode:'index'},
+      plugins:{legend:{display:true, position:'bottom', labels:{font:{family:'Space Grotesk',size:10.5}, boxWidth:12, padding:8}}, tooltip:{enabled:true}},
+      scales:{x:{ticks:{font:{family:'Space Grotesk',size:9},color:'#888'},grid:{display:false}},
+        y:{ticks:{font:{family:'Space Grotesk',size:9},color:'#888', callback:function(v){return fmtCompact(v,1);}}, grid:{color:'rgba(0,0,0,0.05)'}}}
+    }
+  });
+}
+
 // ---- Main Performance Metrics: Origination Mix (Platform & Technology), historico completo ----
 function renderOriginMixCharts(){
   const root = document.getElementById('rat-performance-mix');
@@ -2124,12 +2159,59 @@ function renderOriginMixCharts(){
   ]);
 }
 
-// ---- Main Portfolio Metrics: Net Portfolio/Collection/Growth (line) + Days Past Due (barras apiladas) ----
+// ---- Main Portfolio Metrics: Gross Portfolio (lineas, Total + desgloses) + Portfolio Active
+// Fleet (barras apiladas mensuales, mix por Technology/Platform/City) + Days Past Due ----
 function renderPortfolioCharts(){
   const root = document.getElementById('rat-portfolio-charts');
   if(!root) return;
   root.innerHTML = '';
+
+  // 1) Gross Portfolio (Total) -- linea con Budget/Forecast toggle (reusa renderRatioCharts)
   renderRatioCharts('rat-portfolio-charts', RATIO_CHARTS.main_portfolio);
+
+  // 2) Gross Portfolio -- desgloses por Technology / Platform / City, graficos de LINEA
+  root.insertAdjacentHTML('beforeend',
+    '<div class="vemo-section-title" style="margin-top:18px">Gross Portfolio — <b>Breakdown by Technology · Platform · City</b> <span style="font-weight:400;font-size:11px;color:var(--tx3)">(full history, MXN$)</span></div>' +
+    '<div class="charts-grid">' +
+      '<div class="chart-card"><div class="chart-hd"><span class="t">Gross Portfolio — Technology</span></div><div class="chart-body" style="height:250px"><canvas id="gp-tech"></canvas></div></div>' +
+      '<div class="chart-card"><div class="chart-hd"><span class="t">Gross Portfolio — Platform</span></div><div class="chart-body" style="height:250px"><canvas id="gp-platform"></canvas></div></div>' +
+      '<div class="chart-card" style="grid-column:1 / -1"><div class="chart-hd"><span class="t">Gross Portfolio — City</span></div><div class="chart-body" style="height:270px"><canvas id="gp-city"></canvas></div></div>' +
+    '</div>');
+  _multiLineHistChart('gp-tech', [
+    {l:'EV', k:'vrpm_gp_ev', color:'#11ABAB'}, {l:'ICE', k:'vrpm_gp_ice', color:'#C0392B'}, {l:'HEV', k:'vrpm_gp_hev', color:'#E59500'},
+  ], '__gpBreakdownCharts');
+  _multiLineHistChart('gp-platform', [
+    {l:'Uber', k:'vrpm_gp_uber', color:'#117A45'}, {l:'Didi', k:'vrpm_gp_didi', color:'#7BDADA'},
+  ], '__gpBreakdownCharts');
+  _multiLineHistChart('gp-city', [
+    {l:'CDMX', k:'vrpm_gp_cdmx', color:'#11ABAB'}, {l:'Guadalajara', k:'vrpm_gp_gdl', color:'#C77DFF'},
+    {l:'Monterrey', k:'vrpm_gp_mty', color:'#E59500'}, {l:'Tijuana', k:'vrpm_gp_tij', color:'#C0392B'},
+    {l:'Queretaro', k:'vrpm_gp_qro', color:'#117A45'},
+  ], '__gpBreakdownCharts');
+
+  // 3) Portfolio Active Fleet -- mix mensual, BARRAS APILADAS (Technology / Platform / City)
+  root.insertAdjacentHTML('beforeend',
+    '<div class="vemo-section-title" style="margin-top:18px">Portfolio Active Fleet — <b>Monthly Mix</b> <span style="font-weight:400;font-size:11px;color:var(--tx3)">(full history · the number in each segment is its value)</span></div>' +
+    '<div class="charts-grid">' +
+      '<div class="chart-card" style="grid-column:1 / -1"><div class="chart-hd"><span class="t">Active Fleet — Technology (EV / ICE / HEV)</span></div><div class="chart-body" style="height:270px"><canvas id="af-tech"></canvas></div></div>' +
+      '<div class="chart-card"><div class="chart-hd"><span class="t">Active Fleet — Platform (Uber / Didi)</span></div><div class="chart-body" style="height:250px"><canvas id="af-platform"></canvas></div></div>' +
+      '<div class="chart-card"><div class="chart-hd"><span class="t">Active Fleet — City</span></div><div class="chart-body" style="height:250px"><canvas id="af-city"></canvas></div></div>' +
+    '</div>');
+  const afLabels = _histLabels();
+  const afStackedBar = _stackedBarHistFactory('__afMixCharts');
+  afStackedBar('af-tech', afLabels, [
+    {l:'EV', data: _histSlice('vrpm_af_ev')}, {l:'ICE', data: _histSlice('vrpm_af_ice')}, {l:'HEV', data: _histSlice('vrpm_af_hev')},
+  ]);
+  afStackedBar('af-platform', afLabels, [
+    {l:'Uber', data: _histSlice('vrpm_af_uber')}, {l:'Didi', data: _histSlice('vrpm_af_didi')},
+  ]);
+  afStackedBar('af-city', afLabels, [
+    {l:'CDMX', data: _histSlice('vrpm_af_cdmx')}, {l:'Guadalajara', data: _histSlice('vrpm_af_gdl')},
+    {l:'Monterrey', data: _histSlice('vrpm_af_mty')}, {l:'Tijuana', data: _histSlice('vrpm_af_tij')},
+    {l:'Queretaro', data: _histSlice('vrpm_af_qro')},
+  ]);
+
+  // 4) Days Past Due (ya existente)
   root.insertAdjacentHTML('beforeend',
     '<div class="vemo-section-title" style="margin-top:18px">Days Past Due — <b>Composition (%) by Month</b> <span style="font-weight:400;font-size:11px;color:var(--tx3)">(full history · the number in each segment is its %)</span></div>' +
     '<div class="charts-grid">' +
@@ -2146,17 +2228,26 @@ function renderPortfolioCharts(){
 
 // Mapeo charts por sub-tab
 const RATIO_CHARTS = {
+  // Un chart por cada uno de los 9 Main KPIs (KPI13) -- mismas keys/agg que la tabla de abajo,
+  // para que los charts de arriba y la tabla numerica de abajo muestren exactamente las mismas
+  // 9 metricas (antes solo habia 5 charts, y ademas usaban metricas distintas a KPI13).
   main: [
-    {k:'net_portfolio_board', l:'Net Portfolio (Board)', agg:'eop', fmt:'k'},
-    {k:'collection_rate', l:'Collection Rate', type:'pct', agg:'avg'},
-    {k:'financial_margin', l:'Financial Margin', agg:'sum', fmt:'k', marginKey:'financial_margin_pct', marginLabel:'Fin. Margin %'},
-    {k:'adjusted_financial_margin', l:'Adjusted Financial Margin', agg:'sum', fmt:'k', marginKey:'adjusted_financial_margin_pct', marginLabel:'Adj. Fin. Margin %'},
-    {k:'net_income', l:'Net Income', agg:'sum', fmt:'k'},
+    {keys:['vrpm_gross_portfolio_total'], l:'Gross Portfolio (exc. WK &amp; Other loans)', agg:'eop', fmt:'k'},
+    {keys:['vrpm_active_fleet_total'], l:'Portfolio Active Fleet', agg:'eop', fmt:'int'},
+    {keys:['vrpm_orig_new_total'], l:'Originations (new vehicles, #)', agg:'sum', fmt:'int'},
+    {keys:['vrpm_asset_yield'], l:'Portfolio Asset Yield (YTD)', type:'pct', agg:'avg'},
+    {keys:['vrpm_repo_total'], l:'Effective Repossessions', agg:'sum', fmt:'int'},
+    {keys:['vrpm_repo_pct'], l:'Repossessions (% Total Fleet)', type:'pct', agg:'avg'},
+    {keys:['vrpm_uvi_total'], l:'Used Vehicle Inventory', agg:'eop', fmt:'int'},
+    {keys:['vrpm_uvi_pct'], l:'Used Vehicle Inventory (% Total Fleet)', type:'pct', agg:'avg'},
+    {keys:['vrpm_default_rate'], l:'Portfolio Default Rate', type:'pct', agg:'eop'},
   ],
+  // Solo Gross Portfolio (Total) aqui -- coherente con la tabla de abajo (GROUPS.main_portfolio),
+  // que cubre exclusivamente Gross Portfolio / Active Fleet / Days Past Due. Los desgloses por
+  // Technology/Platform/City (lineas) y el mix mensual de Active Fleet (barras apiladas) se
+  // renderean aparte en renderPortfolioCharts() con _multiLineHistChart / _stackedBarHistFactory.
   main_portfolio: [
-    {k:'net_portfolio_board', l:'Net Portfolio (Board)', agg:'eop', fmt:'k'},
-    {k:'collection_rate', l:'Collection Rate', type:'pct', agg:'avg'},
-    {k:'gross_portfolio_growth', l:'Gross Portfolio Growth (MoM, MXN$)', agg:'sum', fmt:'k'},
+    {keys:['vrpm_gross_portfolio_total'], l:'Gross Portfolio (Total)', agg:'eop', fmt:'k'},
   ],
   credit: [
     {k:'active_units', l:'Active Units', agg:'eop', fmt:'int'},
@@ -2293,8 +2384,19 @@ function makeLineChart(canvasId,label,data,opts){
       return v.toFixed(1);
     };
   }
-  // FIX: Trim X-axis al horizonte real (LI + 3 meses adelante max)
-  const MAX_X = Math.min(D.months.length, LI + 4); // LI + 3 ahead + cushion
+  // FIX: Trim X-axis al horizonte real segun datos disponibles — no un cushion fijo de +4.
+  // Solo se extiende mas alla del ultimo actual (LI) si hay Budget real futuro que graficar,
+  // o si se pidio Forecast (que proyecta un maximo de 3 meses adelante).
+  let lastRealIdx = LI;
+  if(opts.budget && opts.budget.length){
+    for(let i=D.months.length-1; i>LI; i--){
+      if(opts.budget[i]!=null && opts.budget[i]!==0){ lastRealIdx = Math.max(lastRealIdx, i); break; }
+    }
+  }
+  if(opts.projection && (data||[]).slice(0,LI+1).filter(v=>v!=null).length>=3){
+    lastRealIdx = Math.max(lastRealIdx, Math.min(LI+3, D.months.length-1));
+  }
+  const MAX_X = Math.min(D.months.length, lastRealIdx + 1);
   const labels=D.months.slice(0, MAX_X).map((_,i)=>mlblShort(i));
   const slice=(a)=>(a||[]).slice(0,LI+1).concat(new Array(Math.max(0,MAX_X-LI-1)).fill(null));
   const main=slice(data);
@@ -2454,8 +2556,8 @@ function renderExecKpiChart(){
   const ki = KPI13[idx];
   const A = arrCand(ki.keys);
   const B = barrCand(ki.keys);
-  const showBud = document.getElementById('exec-kpi-bud')?.checked;
-  const showProj = document.getElementById('exec-kpi-proj')?.checked;
+  const showBud = document.getElementById('exec-kpi-bud')?.classList.contains('active');
+  const showProj = document.getElementById('exec-kpi-proj')?.classList.contains('active');
   const yfmt = ki.type==='pct' ? (v=>(v*100).toFixed(0)+'%') : (ki.fmt==='int'?(v=>v.toLocaleString()):undefined);
   if(__EXEC_KPI_CHART) __EXEC_KPI_CHART.destroy();
   __EXEC_KPI_CHART = makeLineChart('exec-kpi-canvas', ki.l, A, {budget:showBud?B:null, projection:showProj, yfmt, isPct: ki.type==='pct'});
@@ -2467,8 +2569,8 @@ function renderExecKpiChart(){
     const bud = document.getElementById('exec-kpi-bud');
     const proj = document.getElementById('exec-kpi-proj');
     if(sel) sel.addEventListener('change', renderExecKpiChart);
-    if(bud) bud.addEventListener('change', renderExecKpiChart);
-    if(proj) proj.addEventListener('change', renderExecKpiChart);
+    if(bud) bud.addEventListener('click', ()=>{ bud.classList.toggle('active'); renderExecKpiChart(); });
+    if(proj) proj.addEventListener('click', ()=>{ proj.classList.toggle('active'); renderExecKpiChart(); });
   }
   if(document.readyState==='loading') document.addEventListener('DOMContentLoaded', bind);
   else bind();
@@ -2572,8 +2674,13 @@ function renderPLBridge(){
     document.querySelectorAll('input[name="bridge-mode"]').forEach(r=>{
       r.addEventListener('change', renderPLBridge);
     });
-    document.querySelectorAll('input[name="ebridge-mode"]').forEach(r=>{
-      r.addEventListener('change', renderEbitdaBridge);
+    const ebGroup = document.getElementById('ebridge-mode-group');
+    if(ebGroup) ebGroup.querySelectorAll('.tgl-btn').forEach(btn=>{
+      btn.addEventListener('click', ()=>{
+        ebGroup.querySelectorAll('.tgl-btn').forEach(b=>b.classList.remove('active'));
+        btn.classList.add('active');
+        renderEbitdaBridge();
+      });
     });
   }
   if(document.readyState==='loading') document.addEventListener('DOMContentLoaded', bind);
@@ -2585,7 +2692,7 @@ let __EBRIDGE_CHART = null;
 function renderEbitdaBridge(){
   const ctx = document.getElementById('ebitda-bridge');
   if(!ctx) return;
-  const mode = (document.querySelector('input[name="ebridge-mode"]:checked')||{}).value || 'cur';
+  const mode = document.querySelector('#ebridge-mode-group .tgl-btn.active')?.dataset.mode || 'cur';
   const isYTD = (mode === 'ytd');
   const s = isYTD ? YTD_START : CUR;
   const e = CUR;
@@ -2801,10 +2908,10 @@ function renderPLCharts(){
     const stat='FY25: '+fmtMm(fy25)+' · YTD: '+fmtMm(ytd26);
     html+='<div class="chart-card">'+
       '<div class="chart-hd"><span class="t">'+ln.l+'</span><span class="stats">'+stat+'</span>'+
-      '<div class="chart-toggles">'+
-        '<label><input type="checkbox" data-toggle="bud" data-idx="'+i+'" checked> Budget</label>'+
-        '<label><input type="checkbox" data-toggle="proj" data-idx="'+i+'"> Forecast</label>'+
-      '</div></div>'+
+      '<div class="chart-toggles"><div class="tgl-group">'+
+        '<button type="button" class="tgl-btn active" data-toggle="bud" data-idx="'+i+'">Budget</button>'+
+        '<button type="button" class="tgl-btn" data-toggle="proj" data-idx="'+i+'">Forecast</button>'+
+      '</div></div></div>'+
       '<div class="chart-body"><canvas id="plc-'+i+'"></canvas></div></div>';
   });
   root.innerHTML=html;
@@ -2821,7 +2928,9 @@ function renderPLCharts(){
       const primary = ln.combined[0];
       charts[i] = makeLineChart(canvasId, primary.l, D[primary.k]||[], { yfmt:v=>fmtMm(v) });
       if(charts[i]){
-        const MAX_X = Math.min(D.months.length, LI + 4);
+        // Usar la misma cantidad de labels que ya establecio la linea primaria (evita
+        // desalinear los datasets de las variantes con un cushion +4 independiente).
+        const MAX_X = charts[i].data.labels.length;
         const sliceV = (a)=>(a||[]).slice(0,LI+1).concat(new Array(Math.max(0,MAX_X-LI-1)).fill(null));
         ln.combined.slice(1).forEach(c=>{
           charts[i].data.datasets.push({
@@ -2850,8 +2959,8 @@ function renderPLCharts(){
       B = (B||[]).map(v => v==null ? null : Math.abs(+v||0));
     }
     const card=root.querySelectorAll('.chart-card')[i];
-    const showBud=card.querySelector('[data-toggle="bud"]')?.checked;
-    const showProj=card.querySelector('[data-toggle="proj"]')?.checked;
+    const showBud=card.querySelector('[data-toggle="bud"]')?.classList.contains('active') ?? false;
+    const showProj=card.querySelector('[data-toggle="proj"]')?.classList.contains('active') ?? false;
     if(charts[i]) charts[i].destroy();
     const viewK = plViewKey(ln.k);
     let A2 = arr(viewK), B2 = barr(viewK);
@@ -2880,8 +2989,11 @@ function renderPLCharts(){
     });
   }
   PL_LINES.forEach((_,i)=>build(i));
-  root.querySelectorAll('input[type=checkbox]').forEach(cb=>{
-    cb.addEventListener('change',()=>build(+cb.dataset.idx));
+  root.querySelectorAll('.tgl-btn[data-toggle]').forEach(btn=>{
+    btn.addEventListener('click',()=>{
+      btn.classList.toggle('active');
+      build(+btn.dataset.idx);
+    });
   });
 }
 
