@@ -810,7 +810,7 @@ footer.foot{margin-top:32px;padding-top:16px;border-top:1px solid var(--b);font-
 
 <footer class="foot">
   <div>VEMO · LTO (VEMO Impulso) · Strictly Private &amp; Confidential</div>
-  <div>build 2026-07-22 12:26</div>
+  <div>build 2026-07-22 12:43</div>
 </footer>
 
 <script>
@@ -3094,11 +3094,10 @@ const PL_LINES=[
   {k:'net_operating_revenue',l:'Net Operating Revenue'},
   {k:'total_sga',l:'SG&A',expense:true},
   {k:'ebt',l:'EBT'},
-  {k:'net_income',l:'Net Income'},
   {l:'Net Income — 3 Variants', combined:[
     {k:'net_income',               l:'Net Income',                 color:'#11ABAB'},
     {k:'net_income_ex_corp_cf',    l:'Ex. Corp Expenses & CF',      color:'#0B4F4F'},
-    {k:'net_income_ex_non_op_corp',l:'Ex. Non Operating Ex. Corp',  color:'#7BDADA'},
+    {k:'net_income_non_op',        l:'Ex. Non Operating',          color:'#7BDADA'},
   ]},
 ];
 
@@ -3476,7 +3475,7 @@ function renderPLCharts(){
     if(!arr(ln.k).length) return;
     const fy25=sum(arr(ln.k),0,11), ytd26=sum(arr(ln.k),YTD_START,YTD_END);
     const stat='FY25: '+fmtMm(fy25)+' · YTD: '+fmtMm(ytd26);
-    html+='<div class="chart-card">'+
+    html+='<div class="chart-card" style="grid-column:1 / -1">'+
       '<div class="chart-hd"><span class="t">'+ln.l+'</span><span class="stats">'+stat+'</span>'+
       '<div class="chart-toggles"><div class="tgl-group">'+
         '<button type="button" class="tgl-btn active" data-toggle="bud" data-idx="'+i+'">Budget</button>'+
