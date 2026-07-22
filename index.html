@@ -810,7 +810,7 @@ footer.foot{margin-top:32px;padding-top:16px;border-top:1px solid var(--b);font-
 
 <footer class="foot">
   <div>VEMO · LTO (VEMO Impulso) · Strictly Private &amp; Confidential</div>
-  <div>build 2026-07-22 12:14</div>
+  <div>build 2026-07-22 12:26</div>
 </footer>
 
 <script>
@@ -2718,6 +2718,17 @@ function renderPortfolioCharts(){
     {l:'CDMX', data: _histSlice('vrpm_af_cdmx')}, {l:'Guadalajara', data: _histSlice('vrpm_af_gdl')},
     {l:'Monterrey', data: _histSlice('vrpm_af_mty')}, {l:'Tijuana', data: _histSlice('vrpm_af_tij')},
     {l:'Queretaro', data: _histSlice('vrpm_af_qro')},
+  ]);
+
+  // 3.5) Asset Yield / Interest Rate / Collection Rate / Default Rate (mismo orden que HIER_portfolio)
+  root.insertAdjacentHTML('beforeend',
+    '<div class="vemo-section-title" style="margin-top:18px">Portfolio Rates — <b>Asset Yield · Interest Rate · Collection Rate · Default Rate</b></div>' +
+    '<div id="rat-portfolio-rates"></div>');
+  renderRatioCharts('rat-portfolio-rates', [
+    {keys:['vrpm_asset_yield'], l:'Asset Yield (Portfolio YTD)', type:'pct', agg:'avg', fullWidth:true},
+    {keys:['vrpm_nir'], l:'Interest Rate (Originations)', type:'pct', agg:'avg', fullWidth:true},
+    {keys:['vrpm_collection_rate'], l:'Collection Rate (Total)', type:'pct', agg:'avg', fullWidth:true},
+    {keys:['vrpm_default_rate'], l:'Default Rate (Total)', type:'pct', agg:'avg', fullWidth:true},
   ]);
 
   // 4) Days Past Due (ya existente)
