@@ -817,7 +817,7 @@ footer.foot{margin-top:32px;padding-top:16px;border-top:1px solid var(--b);font-
 
 <footer class="foot">
   <div>VEMO · LTO (VEMO Impulso) · Strictly Private &amp; Confidential</div>
-  <div>build 2026-07-22 17:59</div>
+  <div>build 2026-07-22 18:06</div>
 </footer>
 
 <script>
@@ -1396,8 +1396,8 @@ function rowMargin(label,nKey,dKey,absNumer){
   // Deviation: los renglones de margen/ratio (%) NO llevan Deviation calculada (no aplica
   // comparar deltas de un porcentaje de esta forma) -- se dejan en blanco, pero SIN colspan
   // (celdas individuales) para que las lineas divisorias verticales de la tabla no se corten.
-  const blankDev = '<td class="dev italic">—</td>';
-  const blankDevCur = '<td class="dev italic cur">—</td>';
+  const blankDev = '<td class="dev italic"></td>';
+  const blankDevCur = '<td class="dev italic cur"></td>';
   return '<tr><td class="lbl italic">'+label+'</td>'+
     histCells +
     '<td class="italic">'+fmtPct(m_yoy,1)+'</td>'+
@@ -1459,8 +1459,8 @@ function rowPctDirect(label, key, ytdKey){
   // ROE % (y cualquier otro %-directo del Excel): sin Deviation calculada (mismo criterio que
   // rowMargin) -- celdas individuales en blanco, sin colspan, para no cortar las lineas
   // divisorias verticales de la tabla.
-  const blankDev = '<td class="dev italic">—</td>';
-  const blankDevCur = '<td class="dev italic cur">—</td>';
+  const blankDev = '<td class="dev italic"></td>';
+  const blankDevCur = '<td class="dev italic cur"></td>';
   return '<tr><td class="lbl italic">'+label+'</td>'+
     histCells +
     '<td class="italic">'+fmtPct(v_yoy,1)+'</td>'+
