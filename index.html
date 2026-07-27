@@ -84,21 +84,40 @@ body.dark-mode .kpi-spark svg path[stroke="#1F5454"]{stroke:#9aa3ac!important}
 /* Background completo: blanco para que las barras de grupo se vean "flotando" */
 .vemo-tbl{background:#fff}
 /* Grupo headers (Actuals, Budget, Deviation $, Deviation %): bright teal bars con white separator entre grupos */
-.vemo-tbl thead.grp th{background:#11ABAB !important;color:#fff !important;font-weight:600;font-size:13px;text-align:center;letter-spacing:0.02em;padding:11px 10px;border:none;text-transform:none;font-style:normal;border-right:6px solid #fff !important;border-top:0;border-bottom:4px solid #fff !important;border-radius:0}
-.vemo-tbl thead.grp th:last-child{border-right:6px solid #fff}
+.vemo-tbl thead.grp th{background:#11ABAB !important;color:#fff !important;font-weight:600;font-size:13px;text-align:center;letter-spacing:0.02em;padding:11px 10px;border:none;text-transform:none;font-style:normal;border-right:2px solid #fff !important;border-top:0;border-bottom:4px solid #fff !important;border-radius:0}
+.vemo-tbl thead.grp th:last-child{border-right:2px solid #fff}
 .vemo-tbl thead.grp th.firstcol{background:transparent;color:transparent;border:none}
 /* Sub-headers (Apr-25 Mar-26 Apr-26 YTD, Budget cols, YoY MoM, etc.): bright teal */
 .vemo-tbl thead.sub th{background:#11ABAB !important;color:#fff !important;font-weight:700;font-size:11px;padding:11px 8px;border-right:2px solid #fff !important;border-top:0;text-align:center;line-height:1.2;letter-spacing:0.02em;text-transform:none}
 /* Highlighted columns (mes actual, YTD, Budget actual, Budget YTD, vs Budget, vs Budget YTD): MINT */
 .vemo-tbl thead.sub th.cur{background:#7BDADA !important;color:#fff !important;font-weight:700}
 /* En el body, cur columns: mint suave */
-.vemo-tbl tbody td.cur{background:#fff !important;border-left:2px solid #7BDADA;border-right:2px solid #7BDADA}
+.vemo-tbl tbody td.cur{background:#fff !important}
 /* FIX: la regla de arriba (background:#fff !important) le ganaba SIEMPRE al tono de subtotal
    (linea de abajo, sin !important), sin importar la especificidad extra de ".subtot" -- por eso
    las columnas "cur" (Jun-26, YTD, Budget, vs Budget) se veian blancas mientras el resto de la
    fila si tenia el tono mint, partiendo visualmente el renglon en vez de resaltarlo completo.
    Con !important aqui tambien, gana esta regla mas especifica sobre la generica de arriba. */
-.vemo-tbl tbody tr.subtot td.cur{background:#e6f5f4 !important;border-left:2px solid #7BDADA;border-right:2px solid #7BDADA}
+.vemo-tbl tbody tr.subtot td.cur{background:#e6f5f4 !important}
+/* FIX (caja de highlight "cur" partida/asimetrica): antes CADA columna .cur (Jun-26, YTD,
+   Budget, Budget YTD, vs Budget, vs Budget YTD) traia su PROPIO border-left Y border-right, asi
+   que entre dos columnas .cur consecutivas (ej. YTD y Budget, que estan pegadas sin ninguna
+   columna normal entre medio) se dibujaban DOS bordes juntos (el right de una + el left de la
+   otra) -- eso se ve como una barra doble/gruesa e inconsistente comparado con el borde simple
+   de 2px en los bordes exteriores. Ademas, el header (fila sub-encabezado) nunca tenia esos
+   bordes -- solo cambia de color de fondo -- asi que la "caja" de abajo no se conectaba con nada
+   arriba, y parecia empezar de la nada a la mitad de la tabla en vez de arrancar desde el
+   encabezado. Fix: en vez de bordear CADA columna .cur individualmente, se marca solo el
+   PRIMER y el ULTIMO renglon de cada tramo continuo de columnas .cur con las clases .bl
+   (border-left) / .br (border-right) -- nunca ambas a la vez en columnas intermedias -- y se
+   aplica EXACTAMENTE la misma clase en la MISMA posicion de columna tanto en el encabezado
+   (thead.sub th) como en cada fila del cuerpo (tbody td, incluyendo subtot), asi la caja de
+   highlight es una sola linea continua de 2px que arranca en el encabezado y llega hasta el
+   final de la tabla, sin dobles bordes ni cortes. */
+.vemo-tbl thead.sub th.bl{border-left:2px solid #7BDADA !important}
+.vemo-tbl thead.sub th.br{border-right:2px solid #7BDADA !important}
+.vemo-tbl tbody td.bl{border-left:2px solid #7BDADA !important}
+.vemo-tbl tbody td.br{border-right:2px solid #7BDADA !important}
 /* Primera columna (P&L MXNm): teal deep */
 .vemo-tbl thead th.firstcol{background:#168888 !important;color:#fff !important;text-align:left;padding-left:16px;font-style:normal;font-weight:700;font-size:13px;border-top:0;border-bottom:none}
 /* SS PPT body: columna izquierda TEAL CONTINUA, body cells BLANCAS y CENTRADAS */
@@ -130,20 +149,18 @@ body.dark-mode .kpi-spark svg path[stroke="#1F5454"]{stroke:#9aa3ac!important}
 .vemo-tbl tbody tr.subtot td.pos{color:#168888}
 .vemo-tbl tbody tr.subtot td.dev{background:#e6f5f4}
 .vemo-tbl tbody tr.sep td{height:8px;background:#fff;border:none;padding:0}
-/* Divisor "fin de grupo" (misma logica de plHeaderRows) -- SOLO se aplica en columnas que NO
-   son ".cur": las columnas "cur" (Jun-26, YTD, Budget, Budget YTD, vs Budget, vs Budget YTD) ya
-   traen su propio borde vertical teal continuo (2px, border-left/right:#7BDADA) que corre
-   parejo y delgado por TODA la tabla -- esa es la referencia visual correcta (ver columna
-   Jun-26). Un intento anterior de marcar "fin de grupo" en blanco (o despues en teal 4px) sobre
-   esas MISMAS columnas producia, segun el caso, una linea invisible (blanco sobre fondo blanco)
-   o una caja asimetrica (2px de un lado, 4px del otro) -- ambos se veian mal comparado con el
-   borde parejo de Jun-26. La alineacion real del encabezado (grupo "Actuals"/"Budget"/etc. vs.
-   la fila de sub-encabezado de abajo) ya queda resuelta unificando el grosor DENTRO del thead
-   (ver grpStyle/curEndStyle en plHeaderRows) -- no hace falta replicar ningun divisor extra en
-   el body para las columnas que ya son ".cur", solo para las que no lo son (ej. el limite entre
-   "Historical View" y "Actuals", que no tiene resaltado cur). */
-.vemo-tbl tbody td.gend:not(.cur){border-right:4px solid #fff !important}
-.vemo-tbl tbody tr.subtot td.gend:not(.cur){border-right:4px solid #fff !important}
+/* Divisor "fin de grupo" (Actuals | Budget | Deviation $ | Deviation %). FIX: el selector
+   anterior excluia ".cur" (":not(.cur)") asumiendo que las columnas cur ya traian su propio
+   borde -- pero TODAS las celdas con clase "gend" en el body son tambien ".cur" (no existe
+   ninguna celda "gend" que no sea "cur"), asi que ese selector nunca coincidia con nada: el
+   divisor de fin de grupo JAMAS se dibujaba en el body, en ninguna fila. Ademas, aunque
+   coincidiera, un borde BLANCO sobre el fondo BLANCO de las celdas normales (y de las celdas
+   "cur" en filas no-subtotal, que tambien son blancas -- ver regla de arriba) es literalmente
+   invisible; solo se veia por casualidad en alguna fila subtotal (fondo mint e6f5f4). Fix:
+   selector ":not(.br)" (para no pisar el borde teal de fin-de-tramo del sistema .bl/.br) y un
+   color gris-teal SI visible sobre blanco. */
+.vemo-tbl tbody td.gend:not(.br){border-right:2px solid #BFDFDF !important}
+.vemo-tbl tbody tr.subtot td.gend:not(.br){border-right:2px solid #BFDFDF !important}
 .vemo-tbl tbody tr.exp td.lbl{cursor:pointer}
 .vemo-tbl tbody tr.exp td.lbl::before{content:'▶';display:inline-block;margin-right:7px;font-size:8px;color:rgba(255,255,255,0.85);transition:transform 0.18s}
 .vemo-tbl tbody tr.exp.open td.lbl::before{transform:rotate(90deg)}
@@ -838,7 +855,7 @@ footer.foot{margin-top:32px;padding-top:16px;border-top:1px solid var(--b);font-
 
 <footer class="foot">
   <div>VEMO · LTO (VEMO Impulso) · Strictly Private &amp; Confidential</div>
-  <div>build 2026-07-27 11:19</div>
+  <div>build 2026-07-27 11:41</div>
 </footer>
 
 <script>
@@ -1353,8 +1370,11 @@ function rowMm(key,label,opts){
   // gend: agrega el divisor vertical "fin de grupo" (mismo grosor 4px que usa el header en
   // plHeaderRows) para que YTD / Budget (YTD) / vs. Budget (YTD) queden alineados en TODAS las
   // filas de la tabla, no solo en el encabezado.
-  function cdevCur(v,gend){ if(v==null||isNaN(v)) return '<td class="cur dev'+(gend?' gend':'')+'">—</td>'; const nv=opts.invert?-v:v; const cls=nv<0?'neg':(nv>0?'pos':''); return '<td class="cur dev '+cls+(gend?' gend':'')+'">'+fmtMm(v)+'</td>'; }
-  function cpctCur(v,ref,gend){ if(v==null||ref==null) return '<td class="cur dev'+(gend?' gend':'')+'">—</td>'; if(!ref||isNaN(ref)) return '<td class="cur dev'+(gend?' gend':'')+'">n.m.</td>'; const p=v/Math.abs(ref)*100; const nv=opts.invert?-p:p; const cls=nv<0?'neg':(nv>0?'pos':''); return '<td class="cur dev '+cls+(gend?' gend':'')+'">'+fmtPct(p,1)+'</td>'; }
+  // extra: clases adicionales de borde ('bl'/'br', marcando el INICIO/FIN de un tramo continuo
+  // de columnas .cur) que se agregan tal cual, ademas de 'gend' (divisor blanco de fin de grupo,
+  // que ahora solo pinta en columnas NO-cur -- ver CSS ":not(.cur)").
+  function cdevCur(v,gend,extra){ const ex=(gend?' gend':'')+(extra?' '+extra:''); if(v==null||isNaN(v)) return '<td class="cur dev'+ex+'">—</td>'; const nv=opts.invert?-v:v; const cls=nv<0?'neg':(nv>0?'pos':''); return '<td class="cur dev '+cls+ex+'">'+fmtMm(v)+'</td>'; }
+  function cpctCur(v,ref,gend,extra){ const ex=(gend?' gend':'')+(extra?' '+extra:''); if(v==null||ref==null) return '<td class="cur dev'+ex+'">—</td>'; if(!ref||isNaN(ref)) return '<td class="cur dev'+ex+'">n.m.</td>'; const p=v/Math.abs(ref)*100; const nv=opts.invert?-p:p; const cls=nv<0?'neg':(nv>0?'pos':''); return '<td class="cur dev '+cls+ex+'">'+fmtPct(p,1)+'</td>'; }
   let histCells = '';
   if(PL_SHOW_HISTORIC){
     if(PL_PERIOD_MODE === 'quarterly'){
@@ -1369,12 +1389,12 @@ function rowMm(key,label,opts){
         quarters[q] += +a[i]||0;
       }
       qOrder.forEach(function(q,qi){
-        histCells += '<td style="background:#fafdfd;font-size:10.5px;padding:6px 5px'+(qi===qOrder.length-1?';border-right:4px solid #fff !important':'')+'">'+fmtMm(quarters[q])+'</td>';
+        histCells += '<td style="background:#fafdfd;font-size:10.5px;padding:6px 5px'+(qi===qOrder.length-1?';border-right:2px solid #BFDFDF !important':'')+'">'+fmtMm(quarters[q])+'</td>';
       });
     } else {
       for(let i=0; i<=LI; i++){
         const v = +a[i]||0;
-        histCells += '<td style="background:#fafdfd;font-size:10.5px;padding:6px 5px'+(i===LI?';border-right:4px solid #fff !important':'')+'">'+fmtMm(v)+'</td>';
+        histCells += '<td style="background:#fafdfd;font-size:10.5px;padding:6px 5px'+(i===LI?';border-right:2px solid #BFDFDF !important':'')+'">'+fmtMm(v)+'</td>';
       }
     }
   }
@@ -1383,12 +1403,12 @@ function rowMm(key,label,opts){
     histCells +
     '<td>'+fmtMm(a_yoy)+'</td>'+
     '<td>'+fmtMm(a_prev)+'</td>'+
-    '<td class="cur">'+fmtMm(a_cur)+'</td>'+
+    '<td class="cur bl">'+fmtMm(a_cur)+'</td>'+
     '<td class="cur gend">'+fmtMm(a_ytd)+'</td>'+
     '<td class="cur">'+(b_cur!=null?fmtMm(b_cur):'—')+'</td>'+
-    '<td class="cur gend">'+(b_ytd!=null?fmtMm(b_ytd):'—')+'</td>'+
-    cdev(d_yoy)+cdev(d_mom)+cdevCur(d_bud)+cdevCur(d_bud_ytd,true)+
-    cpct(d_yoy,a_yoy)+cpct(d_mom,a_prev)+cpctCur(d_bud,b_cur)+cpctCur(d_bud_ytd,b_ytd,true)+
+    '<td class="cur gend br">'+(b_ytd!=null?fmtMm(b_ytd):'—')+'</td>'+
+    cdev(d_yoy)+cdev(d_mom)+cdevCur(d_bud,false,'bl')+cdevCur(d_bud_ytd,true,'br')+
+    cpct(d_yoy,a_yoy)+cpct(d_mom,a_prev)+cpctCur(d_bud,b_cur,false,'bl')+cpctCur(d_bud_ytd,b_ytd,true,'br')+
   '</tr>';
 }
 
@@ -1416,13 +1436,13 @@ function rowMargin(label,nKey,dKey,absNumer){
       }
       qOrd.forEach(function(q,qi){
         const margin = qD[q] ? (ab(qN[q])/qD[q])*100 : null;
-        histCells += '<td class="italic" style="background:#fafdfd;font-size:10.5px;padding:6px 5px'+(qi===qOrd.length-1?';border-right:4px solid #fff !important':'')+'">'+fmtPct(margin,1)+'</td>';
+        histCells += '<td class="italic" style="background:#fafdfd;font-size:10.5px;padding:6px 5px'+(qi===qOrd.length-1?';border-right:2px solid #BFDFDF !important':'')+'">'+fmtPct(margin,1)+'</td>';
       });
     } else {
       for(let i=0; i<=LI; i++){
         const numer = +n[i]||0, denom = +d[i]||0;
         const m = denom ? (ab(numer)/denom)*100 : null;
-        histCells += '<td class="italic" style="background:#fafdfd;font-size:10.5px;padding:6px 5px'+(i===LI?';border-right:4px solid #fff !important':'')+'">'+fmtPct(m,1)+'</td>';
+        histCells += '<td class="italic" style="background:#fafdfd;font-size:10.5px;padding:6px 5px'+(i===LI?';border-right:2px solid #BFDFDF !important':'')+'">'+fmtPct(m,1)+'</td>';
       }
     }
   }
@@ -1430,16 +1450,16 @@ function rowMargin(label,nKey,dKey,absNumer){
   // comparar deltas de un porcentaje de esta forma) -- se dejan en blanco, pero SIN colspan
   // (celdas individuales) para que las lineas divisorias verticales de la tabla no se corten.
   const blankDev = '<td class="dev italic"></td>';
-  const blankDevCur = '<td class="dev italic cur"></td>';
-  const blankDevCurEnd = '<td class="dev italic cur gend"></td>';
+  const blankDevCur = '<td class="dev italic cur bl"></td>';
+  const blankDevCurEnd = '<td class="dev italic cur gend br"></td>';
   return '<tr><td class="lbl italic">'+label+'</td>'+
     histCells +
     '<td class="italic">'+fmtPct(m_yoy,1)+'</td>'+
     '<td class="italic">'+fmtPct(m_prev,1)+'</td>'+
-    '<td class="italic cur">'+fmtPct(m_cur,1)+'</td>'+
+    '<td class="italic cur bl">'+fmtPct(m_cur,1)+'</td>'+
     '<td class="italic cur gend">'+fmtPct(m_ytd,1)+'</td>'+
     '<td class="italic cur">'+fmtPct(mb_cur,1)+'</td>'+
-    '<td class="italic cur gend">'+fmtPct(mb_ytd,1)+'</td>'+
+    '<td class="italic cur gend br">'+fmtPct(mb_ytd,1)+'</td>'+
     blankDev+blankDev+blankDevCur+blankDevCurEnd+
     blankDev+blankDev+blankDevCur+blankDevCurEnd+'</tr>';
 }
@@ -1481,12 +1501,12 @@ function rowPctDirect(label, key, ytdKey){
       }
       qOrd.forEach(function(q,qi){
         const m = qN[q] ? pv(qV[q]/qN[q]) : null;
-        histCells += '<td class="italic" style="background:#fafdfd;font-size:10.5px;padding:6px 5px'+(qi===qOrd.length-1?';border-right:4px solid #fff !important':'')+'">'+fmtPct(m,1)+'</td>';
+        histCells += '<td class="italic" style="background:#fafdfd;font-size:10.5px;padding:6px 5px'+(qi===qOrd.length-1?';border-right:2px solid #BFDFDF !important':'')+'">'+fmtPct(m,1)+'</td>';
       });
     } else {
       for(let i=0; i<=LI; i++){
         const m = pv(v[i]);
-        histCells += '<td class="italic" style="background:#fafdfd;font-size:10.5px;padding:6px 5px'+(i===LI?';border-right:4px solid #fff !important':'')+'">'+fmtPct(m,1)+'</td>';
+        histCells += '<td class="italic" style="background:#fafdfd;font-size:10.5px;padding:6px 5px'+(i===LI?';border-right:2px solid #BFDFDF !important':'')+'">'+fmtPct(m,1)+'</td>';
       }
     }
   }
@@ -1494,16 +1514,16 @@ function rowPctDirect(label, key, ytdKey){
   // rowMargin) -- celdas individuales en blanco, sin colspan, para no cortar las lineas
   // divisorias verticales de la tabla.
   const blankDev = '<td class="dev italic"></td>';
-  const blankDevCur = '<td class="dev italic cur"></td>';
-  const blankDevCurEnd = '<td class="dev italic cur gend"></td>';
+  const blankDevCur = '<td class="dev italic cur bl"></td>';
+  const blankDevCurEnd = '<td class="dev italic cur gend br"></td>';
   return '<tr><td class="lbl italic">'+label+'</td>'+
     histCells +
     '<td class="italic">'+fmtPct(v_yoy,1)+'</td>'+
     '<td class="italic">'+fmtPct(v_prev,1)+'</td>'+
-    '<td class="italic cur">'+fmtPct(v_cur,1)+'</td>'+
+    '<td class="italic cur bl">'+fmtPct(v_cur,1)+'</td>'+
     '<td class="italic cur gend">'+fmtPct(v_ytd,1)+'</td>'+
     '<td class="italic cur">'+fmtPct(vb_cur,1)+'</td>'+
-    '<td class="italic cur gend">'+fmtPct(vb_ytd,1)+'</td>'+
+    '<td class="italic cur gend br">'+fmtPct(vb_ytd,1)+'</td>'+
     blankDev+blankDev+blankDevCur+blankDevCurEnd+
     blankDev+blankDev+blankDevCur+blankDevCurEnd+'</tr>';
 }
@@ -1517,9 +1537,9 @@ function plHeaderRows(title){
   // border-collapse:separate) hacia que el borde de grupo no quedara exactamente alineado con
   // el limite real de columnas mas abajo. Con el mismo grosor en TODAS las filas de esa columna,
   // el navegador calcula el mismo ancho de columna en toda la tabla y el corte queda perfecto.
-  const GEND = 'border-right:4px solid #fff !important';
-  const grpStyle = 'background:#11ABAB;color:#fff;font-weight:600;font-size:13px;text-align:center;padding:11px 10px;border-right:4px solid #fff;border-bottom:4px solid #fff;letter-spacing:0.02em';
-  const grpHistStyle = 'background:#168888;color:#fff;font-weight:600;font-size:13px;text-align:center;padding:11px 10px;border-right:4px solid #fff;border-bottom:4px solid #fff;letter-spacing:0.02em';
+  const GEND = 'border-right:2px solid #fff !important';
+  const grpStyle = 'background:#11ABAB;color:#fff;font-weight:600;font-size:13px;text-align:center;padding:11px 10px;border-right:2px solid #fff;border-bottom:4px solid #fff;letter-spacing:0.02em';
+  const grpHistStyle = 'background:#168888;color:#fff;font-weight:600;font-size:13px;text-align:center;padding:11px 10px;border-right:2px solid #fff;border-bottom:4px solid #fff;letter-spacing:0.02em';
   const subStyle = 'background:#11ABAB;color:#fff;font-weight:700;font-size:11px;padding:11px 8px;border-right:2px solid #fff;text-align:center;line-height:1.2;letter-spacing:0.02em';
   const subHistStyle = 'background:#168888;color:#fff;font-weight:600;font-size:10.5px;padding:9px 6px;border-right:1px solid rgba(255,255,255,0.20);text-align:center;line-height:1.2';
   const curStyle = 'background:#7BDADA;color:#fff;font-weight:700;font-size:11px;padding:11px 8px;border-right:2px solid #fff;text-align:center;line-height:1.2;letter-spacing:0.02em';
@@ -1558,14 +1578,14 @@ function plHeaderRows(title){
     histSub +
     '<th style="'+subStyle+'">'+mlbl(YOY)+'</th>'+
     '<th style="'+subStyle+'">'+mlbl(PREV)+'</th>'+
-    '<th class="cur" style="'+curStyle+'">'+mlbl(CUR)+'</th>'+
+    '<th class="cur bl" style="'+curStyle+'">'+mlbl(CUR)+'</th>'+
     '<th class="cur" style="'+curEndStyle+'">YTD</th>'+
     '<th class="cur" style="'+curStyle+'">Budget '+mlbl(CUR)+'</th>'+
-    '<th class="cur" style="'+curEndStyle+'">Budget (YTD)</th>'+
+    '<th class="cur br" style="'+curEndStyle+'">Budget (YTD)</th>'+
     '<th style="'+subStyle+'">YoY</th><th style="'+subStyle+'">MoM</th>'+
-    '<th class="cur" style="'+curStyle+'">vs. Budget</th><th class="cur" style="'+curEndStyle+'">vs. Budget (YTD)</th>'+
+    '<th class="cur bl" style="'+curStyle+'">vs. Budget</th><th class="cur br" style="'+curEndStyle+'">vs. Budget (YTD)</th>'+
     '<th style="'+subStyle+'">YoY</th><th style="'+subStyle+'">MoM</th>'+
-    '<th class="cur" style="'+curStyle+'">vs. Budget</th><th class="cur" style="'+curEndStyle+'">vs. Budget (YTD)</th>'+
+    '<th class="cur bl" style="'+curStyle+'">vs. Budget</th><th class="cur br" style="'+curEndStyle+'">vs. Budget (YTD)</th>'+
   '</tr></thead>';
 }
 
