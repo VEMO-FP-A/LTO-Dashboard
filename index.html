@@ -130,23 +130,20 @@ body.dark-mode .kpi-spark svg path[stroke="#1F5454"]{stroke:#9aa3ac!important}
 .vemo-tbl tbody tr.subtot td.pos{color:#168888}
 .vemo-tbl tbody tr.subtot td.dev{background:#e6f5f4}
 .vemo-tbl tbody tr.sep td{height:8px;background:#fff;border:none;padding:0}
-/* Divisor "fin de grupo" (misma linea/grosor que el header en plHeaderRows: GEND, 4px) aplicado
-   a la ULTIMA columna de cada grupo (YTD Actuals, Budget (YTD), vs. Budget (YTD) x2) en TODAS
-   las filas del body, no solo en el encabezado -- asi el corte entre Actuals|Budget|Deviation ($)|
-   Deviation (%) queda perfectamente alineado de arriba a abajo en toda la tabla. */
-.vemo-tbl tbody td.gend{border-right:4px solid #fff !important}
-.vemo-tbl tbody tr.subtot td.gend{border-right:4px solid #fff !important}
-/* FIX: las MISMAS columnas de fin-de-grupo (YTD, Budget YTD, vs. Budget YTD x2) son TAMBIEN
-   columnas "cur" (highlight mint), que ya traian su propio borde vertical teal continuo
-   (border-left/right:2px solid #7BDADA) recorriendo TODA la tabla de arriba a abajo para marcar
-   visualmente el rango resaltado. La regla ".gend" de arriba (blanco) le ganaba a ese borde teal
-   enESAS columnas puntuales -- y como la mayoria de filas del body tienen fondo blanco, un borde
-   blanco ahi es invisible, cortando la linea verde justo en los bordes de grupo (se veia
-   continua en las columnas intermedias pero desaparecia en YTD/Budget YTD/vs Budget YTD). Con
-   selector mas especifico ".cur.gend" en teal (mismo grosor 4px, para no romper el alineamiento
-   de columnas ya corregido) la linea queda continua y verde en TODA la tabla, sin cortes. */
-.vemo-tbl tbody td.cur.gend{border-right:4px solid #7BDADA !important}
-.vemo-tbl tbody tr.subtot td.cur.gend{border-right:4px solid #7BDADA !important}
+/* Divisor "fin de grupo" (misma logica de plHeaderRows) -- SOLO se aplica en columnas que NO
+   son ".cur": las columnas "cur" (Jun-26, YTD, Budget, Budget YTD, vs Budget, vs Budget YTD) ya
+   traen su propio borde vertical teal continuo (2px, border-left/right:#7BDADA) que corre
+   parejo y delgado por TODA la tabla -- esa es la referencia visual correcta (ver columna
+   Jun-26). Un intento anterior de marcar "fin de grupo" en blanco (o despues en teal 4px) sobre
+   esas MISMAS columnas producia, segun el caso, una linea invisible (blanco sobre fondo blanco)
+   o una caja asimetrica (2px de un lado, 4px del otro) -- ambos se veian mal comparado con el
+   borde parejo de Jun-26. La alineacion real del encabezado (grupo "Actuals"/"Budget"/etc. vs.
+   la fila de sub-encabezado de abajo) ya queda resuelta unificando el grosor DENTRO del thead
+   (ver grpStyle/curEndStyle en plHeaderRows) -- no hace falta replicar ningun divisor extra en
+   el body para las columnas que ya son ".cur", solo para las que no lo son (ej. el limite entre
+   "Historical View" y "Actuals", que no tiene resaltado cur). */
+.vemo-tbl tbody td.gend:not(.cur){border-right:4px solid #fff !important}
+.vemo-tbl tbody tr.subtot td.gend:not(.cur){border-right:4px solid #fff !important}
 .vemo-tbl tbody tr.exp td.lbl{cursor:pointer}
 .vemo-tbl tbody tr.exp td.lbl::before{content:'▶';display:inline-block;margin-right:7px;font-size:8px;color:rgba(255,255,255,0.85);transition:transform 0.18s}
 .vemo-tbl tbody tr.exp.open td.lbl::before{transform:rotate(90deg)}
@@ -841,7 +838,7 @@ footer.foot{margin-top:32px;padding-top:16px;border-top:1px solid var(--b);font-
 
 <footer class="foot">
   <div>VEMO · LTO (VEMO Impulso) · Strictly Private &amp; Confidential</div>
-  <div>build 2026-07-27 10:51</div>
+  <div>build 2026-07-27 11:15</div>
 </footer>
 
 <script>
