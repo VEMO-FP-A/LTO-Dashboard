@@ -136,6 +136,17 @@ body.dark-mode .kpi-spark svg path[stroke="#1F5454"]{stroke:#9aa3ac!important}
    Deviation (%) queda perfectamente alineado de arriba a abajo en toda la tabla. */
 .vemo-tbl tbody td.gend{border-right:4px solid #fff !important}
 .vemo-tbl tbody tr.subtot td.gend{border-right:4px solid #fff !important}
+/* FIX: las MISMAS columnas de fin-de-grupo (YTD, Budget YTD, vs. Budget YTD x2) son TAMBIEN
+   columnas "cur" (highlight mint), que ya traian su propio borde vertical teal continuo
+   (border-left/right:2px solid #7BDADA) recorriendo TODA la tabla de arriba a abajo para marcar
+   visualmente el rango resaltado. La regla ".gend" de arriba (blanco) le ganaba a ese borde teal
+   enESAS columnas puntuales -- y como la mayoria de filas del body tienen fondo blanco, un borde
+   blanco ahi es invisible, cortando la linea verde justo en los bordes de grupo (se veia
+   continua en las columnas intermedias pero desaparecia en YTD/Budget YTD/vs Budget YTD). Con
+   selector mas especifico ".cur.gend" en teal (mismo grosor 4px, para no romper el alineamiento
+   de columnas ya corregido) la linea queda continua y verde en TODA la tabla, sin cortes. */
+.vemo-tbl tbody td.cur.gend{border-right:4px solid #7BDADA !important}
+.vemo-tbl tbody tr.subtot td.cur.gend{border-right:4px solid #7BDADA !important}
 .vemo-tbl tbody tr.exp td.lbl{cursor:pointer}
 .vemo-tbl tbody tr.exp td.lbl::before{content:'▶';display:inline-block;margin-right:7px;font-size:8px;color:rgba(255,255,255,0.85);transition:transform 0.18s}
 .vemo-tbl tbody tr.exp.open td.lbl::before{transform:rotate(90deg)}
@@ -830,7 +841,7 @@ footer.foot{margin-top:32px;padding-top:16px;border-top:1px solid var(--b);font-
 
 <footer class="foot">
   <div>VEMO · LTO (VEMO Impulso) · Strictly Private &amp; Confidential</div>
-  <div>build 2026-07-27 10:35</div>
+  <div>build 2026-07-27 10:51</div>
 </footer>
 
 <script>
