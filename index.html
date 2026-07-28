@@ -848,14 +848,15 @@ footer.foot{margin-top:32px;padding-top:16px;border-top:1px solid var(--b);font-
   <div id="cmp-table" class="vemo-wrap" style="margin-bottom:24px"></div>
 
 
-  <div class="note">📊 <b>Heatmap</b> — actualmente en modo <b id="hm-mode-lbl">MoM</b>. Cambia el modo arriba para ver YoY o YTD.</div>
-  <div id="heatmap-wrap" class="heatmap-wrap"></div>
+  <div class="note">📊 <b>Heatmap</b> — actualmente en modo <b id="hm-mode-lbl">MoM</b>. Cambia el modo arriba para ver YoY o YTD. Las lineas de P&amp;L (EBT, Net Income) se muestran en vista <b>Managerial</b>.</div>
+  <div id="heatmap-wrap-metrics" class="heatmap-wrap" style="margin-bottom:18px"></div>
+  <div id="heatmap-wrap-pl" class="heatmap-wrap"></div>
   <div id="var-table" class="vemo-wrap"></div>
 </section>
 
 <footer class="foot">
   <div>VEMO · LTO (VEMO Impulso) · Strictly Private &amp; Confidential</div>
-  <div>build 2026-07-27 18:52</div>
+  <div>build 2026-07-28 10:34</div>
 </footer>
 
 <script>
@@ -1183,7 +1184,11 @@ function renderKPICards(){
     const momCls=isNegBetter(momPct)?'neg':'pos';
     const budCls=isNegBetter(budPct)?'neg':'pos';
     const arrSym=momPct==null?'':(momPct>=0?'▲':'▼');
-    const cardCls=isNegBetter(momPct)?'amber':'';
+    // FIX: el color del margen izquierdo de la tarjeta (franja teal/amber) dependia del MoM --
+    // pero el MoM solo dice "subio o bajo vs el mes pasado", no si vamos bien o mal contra el
+    // Plan. Ahora depende de la variacion vs Budget (budPct): si no hay Budget cargado para esta
+    // KPI, se queda en el color default (teal), no hay base para marcar alerta.
+    const cardCls=isNegBetter(budPct)?'amber':'';
 
     // Serie para sparkline -- arrancar en el primer mes con dato REAL (no en Ene-25 siempre),
     // asi metricas VRP que solo tienen historia desde Oct-25 no muestran un tramo plano vacio
@@ -3752,20 +3757,23 @@ function renderVariation(){
   const vmodeBtn = document.querySelector('.var-filters:not(#custom-pickers) .vmode button.active');
   const mode = vmodeBtn?.dataset.mode || 'mom';
   const customPickers = document.getElementById('custom-pickers');
-  const heatmapWrap = document.getElementById('heatmap-wrap');
+  const heatmapWrapMetrics = document.getElementById('heatmap-wrap-metrics');
+  const heatmapWrapPL = document.getElementById('heatmap-wrap-pl');
   const varTable = document.getElementById('var-table');
   const cmpTable = document.getElementById('cmp-table');
   if(mode === 'custom'){
     // Show custom pickers, hide heatmap+vartable, show comparator
     if(customPickers) customPickers.style.display = 'flex';
-    if(heatmapWrap) heatmapWrap.style.display = 'none';
+    if(heatmapWrapMetrics) heatmapWrapMetrics.style.display = 'none';
+    if(heatmapWrapPL) heatmapWrapPL.style.display = 'none';
     if(varTable) varTable.style.display = 'none';
     if(cmpTable) cmpTable.style.display = 'block';
     renderComparator();
   } else {
     // Hide custom pickers, show heatmap+vartable, hide comparator
     if(customPickers) customPickers.style.display = 'none';
-    if(heatmapWrap) heatmapWrap.style.display = 'block';
+    if(heatmapWrapMetrics) heatmapWrapMetrics.style.display = 'block';
+    if(heatmapWrapPL) heatmapWrapPL.style.display = 'block';
     if(varTable) varTable.style.display = 'block';
     if(cmpTable) cmpTable.style.display = 'none';
     const fromIdx=+document.getElementById('vf-from').value;
@@ -3775,36 +3783,61 @@ function renderVariation(){
   }
 }
 
-function renderHeatmap(fromIdx,toIdx,mode){
-  const root=document.getElementById('heatmap-wrap');
-  // Solo lineas de P&L (mismo set/orden que PL_HIER) -- se quitaron las metricas operacionales
-  // (Origination, Net Portfolio, Collection Rate, +61 DPD, Active Units, Repossessed Units,
-  // Renewal Rate, NIM/Nominal Rate) a pedido del usuario.
-  const lines=[
-    {k:'interest_income',l:'Interest Income'},
-    {k:'interest_expense',l:'Interest Expense'},
-    {k:'financial_margin',l:'Financial Margin'},
-    {k:'adjusted_financial_margin',l:'Adj. Financial Margin'},
-    {k:'other_operating_revenue',l:'Other Operating Revenue'},
-    {k:'net_operating_revenue',l:'Net Operating Revenue'},
-    {k:'cogs_total',l:'COGS'},
-    {k:'payroll_expense',l:'Payroll Expense'},
-    {k:'total_sga',l:'SG&A'},
-    {k:'da_total',l:'D&A'},
-    {k:'ebt',l:'EBT'},
-    {k:'net_income',l:'Net Income'},
-  ];
+// FIX: "EBT"/"Net Income" en Heatmap/Variation table usaban la key plana (D.ebt / D.net_income),
+// que no es ni la version Managerial ni la Accounting -- es el numero "crudo" pre-ajuste. El
+// usuario pidio explicitamente que estas variaciones se muestren en vista Managerial (misma
+// logica que plViewKey() usa cuando PL_VIEW==='managerial'), sin importar el toggle global del
+// P&L (esta seccion de Variation no tiene su propio toggle, asi que se fuerza siempre).
+function _mgrLineKey(k){
+  if(k==='ebt') return (D.ebt_ex_non_op && D.ebt_ex_non_op.length) ? 'ebt_ex_non_op' : 'ebt';
+  if(k==='net_income') return (D.net_income_non_op && D.net_income_non_op.length) ? 'net_income_non_op' : 'net_income';
+  return k;
+}
+
+// Lineas de "Metricas" (operacionales, no P&L) -- separadas del heatmap de P&L a pedido del
+// usuario, para no mezclar unidades/porcentajes de negocio con lineas de estado de resultados.
+const HEATMAP_METRICS_LINES=[
+  {k:'origination_total',l:'Origination (#)'},
+  {k:'net_portfolio_board',l:'Net Portfolio (Board)'},
+  {k:'collection_rate',l:'Collection Rate'},
+  {k:'bucket_61plus',l:'+61 Past Due'},
+  {k:'active_units',l:'Active Units'},
+  {k:'repossessed_units_eop',l:'Repossessed Units (EoP)'},
+  {k:'renewal_rate_board',l:'Renewal Rate (Board)'},
+  {k:'nim',l:'Net Interest Margin'},
+];
+// Lineas de P&L (mismo set/orden que PL_HIER) -- EBT y Net Income se resuelven siempre a su
+// variante Managerial via _mgrLineKey().
+const HEATMAP_PL_LINES=[
+  {k:'interest_income',l:'Interest Income'},
+  {k:'interest_expense',l:'Interest Expense'},
+  {k:'financial_margin',l:'Financial Margin'},
+  {k:'adjusted_financial_margin',l:'Adj. Financial Margin'},
+  {k:'other_operating_revenue',l:'Other Operating Revenue'},
+  {k:'net_operating_revenue',l:'Net Operating Revenue'},
+  {k:'cogs_total',l:'COGS'},
+  {k:'payroll_expense',l:'Payroll Expense'},
+  {k:'total_sga',l:'SG&A'},
+  {k:'da_total',l:'D&A'},
+  {k:'ebt',l:'EBT'},
+  {k:'net_income',l:'Net Income'},
+];
+
+function _renderOneHeatmap(rootId, lines, title, fromIdx, toIdx, mode){
+  const root=document.getElementById(rootId);
+  if(!root) return;
   let header='<th></th>';
   for(let i=fromIdx;i<=toIdx;i++) header+='<th>'+mlblShort(i)+'</th>';
   let body='';
   lines.forEach(ln=>{
-    const a=arr(ln.k); if(!a.length) return;
+    const rk=_mgrLineKey(ln.k);
+    const a=arr(rk); if(!a.length) return;
     let row='<td class="lbl">'+ln.l+'</td>';
     for(let i=fromIdx;i<=toIdx;i++){
       let pct=null;
       if(mode==='mom'){ const prev=+a[i-1]||0, cur=+a[i]||0; if(prev) pct=(cur-prev)/Math.abs(prev)*100; }
       else if(mode==='yoy'){ const yoy=+a[i-12]||0, cur=+a[i]||0; if(yoy) pct=(cur-yoy)/Math.abs(yoy)*100; }
-      else if(mode==='bud'){ const b=barr(ln.k); const bv=+b[i]||0, cur=+a[i]||0; if(bv) pct=(cur-bv)/Math.abs(bv)*100; }
+      else if(mode==='bud'){ const b=barr(rk); const bv=+b[i]||0, cur=+a[i]||0; if(bv) pct=(cur-bv)/Math.abs(bv)*100; }
       else { const yY=(D.months[i]||'').split('-')[0]; let yS=0; for(let j=0;j<D.months.length;j++){ if(D.months[j]&&D.months[j].startsWith(yY+'-01')){ yS=j; break; } } const curYtd=sum(a,yS,i), prevYtd=sum(a,yS-12,i-12); if(prevYtd) pct=(curYtd-prevYtd)/Math.abs(prevYtd)*100; }
       const txt=pct==null?'—':(pct>=0?'+':'')+pct.toFixed(0)+'%';
       let bg='#f0f0f0',color='#666';
@@ -3814,9 +3847,14 @@ function renderHeatmap(fromIdx,toIdx,mode){
     body+='<tr>'+row+'</tr>';
   });
   const modeLbl=mode==='mom'?'MoM %':(mode==='yoy'?'YoY %':(mode==='bud'?'vs Budget %':'YTD vs YTD %'));
-  root.innerHTML='<div class="heatmap-hd">Heatmap '+modeLbl+'</div>'+
+  root.innerHTML='<div class="heatmap-hd">'+title+' — Heatmap '+modeLbl+'</div>'+
     '<div class="heatmap-sub">'+mlblShort(fromIdx)+' → '+mlblShort(toIdx)+'</div>'+
     '<table class="heatmap"><thead><tr>'+header+'</tr></thead><tbody>'+body+'</tbody></table>';
+}
+
+function renderHeatmap(fromIdx,toIdx,mode){
+  _renderOneHeatmap('heatmap-wrap-metrics', HEATMAP_METRICS_LINES, 'Métricas', fromIdx, toIdx, mode);
+  _renderOneHeatmap('heatmap-wrap-pl', HEATMAP_PL_LINES, 'P&L (Managerial)', fromIdx, toIdx, mode);
 }
 
 function renderVariationTable(fromIdx,toIdx,mode){
@@ -3839,10 +3877,12 @@ function renderVariationTable(fromIdx,toIdx,mode){
   for(let i=fromIdx;i<=toIdx;i++) header+='<th>'+mlblShort(i)+'</th>';
   let body='';
   lines.forEach(ln=>{
-    const a=arr(ln.k); if(!a.length) return;
+    // EBT/Net Income siempre en vista Managerial (mismo criterio que el heatmap de arriba).
+    const rk=_mgrLineKey(ln.k);
+    const a=arr(rk); if(!a.length) return;
     let row='<td class="lbl">'+ln.l+'</td>';
     for(let i=fromIdx;i<=toIdx;i++){
-      const r=variation(a,i,ln.k); const cur=r[0], ref=r[1];
+      const r=variation(a,i,rk); const cur=r[0], ref=r[1];
       const d=cur-ref;
       const isNeg=ln.invert?d>0:d<0;
       const pct=ref?(d/Math.abs(ref))*100:null;
@@ -6674,7 +6714,9 @@ function renderComparator(){
   ];
   let rows='';
   lines.forEach(ln=>{
-    const a=arr(ln.k); if(!a.length) return;
+    // EBT/Net Income siempre en vista Managerial (mismo criterio que Heatmap/Variation table).
+    const rk=_mgrLineKey(ln.k);
+    const a=arr(rk); if(!a.length) return;
     const va=+a[aIdx]||0, vb=+a[bIdx]||0, d=vb-va;
     const isNeg=ln.invert?d>0:d<0;
     const isPos=ln.invert?d<0:d>0;
