@@ -860,7 +860,7 @@ footer.foot{margin-top:32px;padding-top:16px;border-top:1px solid var(--b);font-
 
 <footer class="foot">
   <div>VEMO · LTO (VEMO Impulso) · Strictly Private &amp; Confidential</div>
-  <div>build 2026-07-30 12:18</div>
+  <div>build 2026-07-30 12:52</div>
 </footer>
 
 <script>
@@ -1088,6 +1088,7 @@ const KPI13=[
   {l:'Gross Portfolio (exc. WK &amp; Other loans)',keys:['vrpm_gross_portfolio_total'],unit:'MXNm',type:'num',agg:'eop',fmt:'mm',better:'up',headline:true},
   {l:'Portfolio Active Fleet',keys:['vrpm_active_fleet_total'],unit:'#',type:'num',agg:'eop',fmt:'int',better:'up'},
   {l:'Originations (new vehicles, #)',keys:['vrpm_orig_new_total'],unit:'#',type:'num',agg:'sum',fmt:'int',better:'up'},
+  {l:'Origination of Used Vehicles (Vehicles Quantity)',keys:['orig_used_total'],unit:'#',type:'num',agg:'sum',fmt:'int',better:'up'},
   {l:'Portfolio Asset Yield (YTD)',keys:['vrpm_asset_yield'],unit:'%',type:'pct',agg:'avg',better:'up'},
   {l:'Effective Repossessions',keys:['vrpm_repo_total'],unit:'#',type:'num',agg:'sum',fmt:'int',better:'down'},
   {l:'Repossessions (% Total Fleet)',keys:['vrpm_repo_pct'],unit:'%',type:'pct',agg:'avg',better:'down'},
@@ -2754,23 +2755,36 @@ function _multiLineHistChart(canvasId, seriesDefs, cacheKey){
   });
 }
 
-// ---- Main Performance Metrics: New Vehicle Origination Mix (Technology/Platform/City) +
+// ---- Main Performance Metrics: New vs Used Originations (Total) + New Vehicle Origination
+// Mix (Technology/Platform/City) + Used Vehicle Origination Mix (Technology/Platform) +
 // Monthly Effective Repossessions Mix (Technology/Platform/City), historico completo ----
-// NOTA: los charts de "Used Vehicles" (Origination) se removieron a pedido del usuario -- el
-// desglose de Used Vehicle Originations sigue disponible como tabla mas abajo si se necesita,
-// solo no se grafica aqui.
+// NOTA: Used Vehicles no tiene desglose por City en ninguna fuente confiable (el usuario
+// confirmo que no cuenta con ese dato) -- por eso su mix solo trae Technology y Platform,
+// a diferencia de New Vehicles que si trae los 3 (Technology/Platform/City).
 function renderOriginMixCharts(){
   const root = document.getElementById('rat-performance-mix');
   if(!root) return;
   root.innerHTML =
-    '<div class="vemo-section-title">New Vehicle Origination Mix — <b>Technology, Platform &amp; City</b> <span style="font-weight:400;font-size:11px;color:var(--tx3)">(Technology/Platform: full history, source "LTO Board View (Actuals)" · City: from "KPIs VRP @LTO", shorter history · the number in each segment is its value)</span></div>' +
+    '<div class="vemo-section-title">Vehicle Originations — <b>New vs Used (Total)</b></div>' +
+    '<div class="charts-grid">' +
+      '<div class="chart-card" style="grid-column:1 / -1"><div class="chart-hd"><span class="t">Total Originations — New vs Used Vehicles</span></div><div class="chart-body" style="height:260px"><canvas id="mix-new-used-total"></canvas></div></div>' +
+    '</div>' +
+    '<div class="vemo-section-title" style="margin-top:18px">New Vehicle Origination Mix — <b>Technology, Platform &amp; City</b></div>' +
     '<div class="charts-grid">' +
       '<div class="chart-card"><div class="chart-hd"><span class="t">New Vehicles — Technology</span></div><div class="chart-body" style="height:230px"><canvas id="mix-new-tech"></canvas></div></div>' +
       '<div class="chart-card"><div class="chart-hd"><span class="t">New Vehicles — Platform</span></div><div class="chart-body" style="height:230px"><canvas id="mix-new-platform"></canvas></div></div>' +
       '<div class="chart-card"><div class="chart-hd"><span class="t">New Vehicles — City</span></div><div class="chart-body" style="height:230px"><canvas id="mix-new-city"></canvas></div></div>' +
+    '</div>' +
+    '<div class="vemo-section-title" style="margin-top:18px">Used Vehicle Origination Mix — <b>Technology &amp; Platform</b></div>' +
+    '<div class="charts-grid">' +
+      '<div class="chart-card"><div class="chart-hd"><span class="t">Used Vehicles — Technology</span></div><div class="chart-body" style="height:230px"><canvas id="mix-used-tech"></canvas></div></div>' +
+      '<div class="chart-card"><div class="chart-hd"><span class="t">Used Vehicles — Platform</span></div><div class="chart-body" style="height:230px"><canvas id="mix-used-platform"></canvas></div></div>' +
     '</div>';
   const labels = _histLabels();
   const stackedBar = _stackedBarHistFactory('__originMixCharts');
+  stackedBar('mix-new-used-total', labels, [
+    {l:'New Vehicles', data: _histSlice('origination_total')}, {l:'Used Vehicles', data: _histSlice('orig_used_total')},
+  ]);
   stackedBar('mix-new-tech', labels, [
     {l:'ICE', data: _histSlice('orig_new_ice')}, {l:'HEV', data: _histSlice('orig_new_hev')}, {l:'EV', data: _histSlice('orig_new_ev')},
   ]);
@@ -2780,6 +2794,12 @@ function renderOriginMixCharts(){
   stackedBar('mix-new-city', labels, [
     {l:'CDMX', data: _histSlice('vrpm_orig_new_cdmx')}, {l:'Guadalajara', data: _histSlice('vrpm_orig_new_gdl')},
     {l:'Monterrey', data: _histSlice('vrpm_orig_new_mty')}, {l:'Tijuana', data: _histSlice('vrpm_orig_new_tij')},
+  ]);
+  stackedBar('mix-used-tech', labels, [
+    {l:'ICE', data: _histSlice('orig_used_ice')}, {l:'HEV', data: _histSlice('orig_used_hev')}, {l:'EV', data: _histSlice('orig_used_ev')},
+  ]);
+  stackedBar('mix-used-platform', labels, [
+    {l:'Uber', data: _histSlice('orig_used_uber')}, {l:'Didi', data: _histSlice('orig_used_didi')},
   ]);
 
   // Monthly Effective Repossessions -- breakdown por Technology / Platform / City (antes solo
@@ -2805,6 +2825,14 @@ function renderOriginMixCharts(){
     {l:'Monterrey', data: _histSlice('vrpm_repo_mty')}, {l:'Tijuana', data: _histSlice('vrpm_repo_tij')},
     {l:'Queretaro', data: _histSlice('vrpm_repo_qro')},
   ]);
+
+  // Metricas "planas" (Monthly Effective Repossessions Total, Repossessions %, Used/New Vehicle
+  // Inventory) -- se agregan aqui mismo (dentro de rat-performance-mix), junto con el resto de
+  // graficos de Main Performance Metrics, en vez de en su propio contenedor separado mas abajo
+  // (rat-performance-flat quedaba despues de la tabla HIER_performance, lejos del resto de charts).
+  root.insertAdjacentHTML('beforeend',
+    '<div class="vemo-section-title" style="margin-top:18px">Repossessions &amp; Inventory — <b>Key Metrics</b></div>');
+  renderRatioCharts('rat-performance-mix', RATIOS.main_performance_flat);
 }
 
 // Estado del toggle "Data labels" del grafico Gross Portfolio -- City -- por defecto OFF
@@ -2916,6 +2944,7 @@ const RATIO_CHARTS = {
     {keys:['vrpm_gross_portfolio_total'], l:'Gross Portfolio (exc. WK &amp; Other loans)', agg:'eop', fmt:'k'},
     {keys:['vrpm_active_fleet_total'], l:'Portfolio Active Fleet', agg:'eop', fmt:'int'},
     {keys:['vrpm_orig_new_total'], l:'Originations (new vehicles, #)', agg:'sum', fmt:'int'},
+    {keys:['orig_used_total'], l:'Origination of Used Vehicles (Vehicles Quantity)', agg:'sum', fmt:'int'},
     {keys:['vrpm_asset_yield'], l:'Portfolio Asset Yield (YTD)', type:'pct', agg:'avg'},
     {keys:['vrpm_repo_total'], l:'Effective Repossessions', agg:'sum', fmt:'int'},
     {keys:['vrpm_repo_pct'], l:'Repossessions (% Total Fleet)', type:'pct', agg:'avg'},
@@ -3002,17 +3031,11 @@ function renderAllRatios(){
       renderHierTable('rat-performance-groups', HIER_performance, {showYTD:true});
     }
   }
-  // Metricas "planas" (Monthly Effective Repossessions Total, Repossessions %, Used/New Vehicle
-  // Inventory): ya vivian como filas en HIER_performance, pero sin su propio grafico -- este
-  // arreglo (RATIOS.main_performance_flat) existia pero nunca se llegaba a renderear en el div
-  // 'rat-performance-flat' del HTML base. Mismo patron que 'rat-portfolio-rates'. Se limpia el
-  // innerHTML primero (no solo insertAdjacentHTML) para que re-renders sucesivos no acumulen
-  // charts duplicados.
-  {
-    const flatTgt = document.getElementById('rat-performance-flat');
-    if(flatTgt) flatTgt.innerHTML = '<div class="vemo-section-title" style="margin-top:18px">Repossessions &amp; Inventory — <b>Key Metrics</b></div>';
-  }
-  renderRatioCharts('rat-performance-flat', RATIOS.main_performance_flat);
+  // NOTA: las metricas "planas" (Monthly Effective Repossessions Total, Repossessions %,
+  // Used/New Vehicle Inventory) se renderean ahora DENTRO de renderOriginMixCharts() (en
+  // rat-performance-mix), junto con el resto de graficos de Main Performance Metrics, a pedido
+  // del usuario -- antes vivian en su propio contenedor (rat-performance-flat) que quedaba
+  // despues de la tabla HIER_performance, lejos del resto de charts.
 
   renderPair('rat-fin',         RATIOS.fin,         RATIO_CHARTS.fin,         'VEMO Impulso – <b>Financial Ratios</b>');
 }
