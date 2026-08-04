@@ -912,7 +912,7 @@ footer.foot{margin-top:32px;padding-top:16px;border-top:1px solid var(--b);font-
 
 <footer class="foot">
   <div>VEMO · LTO (VEMO Impulso) · Strictly Private &amp; Confidential</div>
-  <div>build 2026-08-03 20:26</div>
+  <div>build 2026-08-03 20:32</div>
 </footer>
 
 <script>
@@ -3339,10 +3339,9 @@ const PL_LINES=[
   {k:'net_operating_revenue',l:'Net Operating Revenue'},
   {k:'total_sga',l:'SG&A',expense:true},
   {k:'ebt',l:'EBT'},
-  {l:'Net Income — 3 Variants', combined:[
+  {l:'Net Income vs Budget', combined:[
     {k:'net_income',               l:'Net Income',                 color:'#11ABAB'},
-    {k:'net_income_ex_corp_cf',    l:'Ex. Corp Expenses & CF',      color:'#0B4F4F'},
-    {k:'net_income_non_op',        l:'Ex. Non Operating',          color:'#7BDADA'},
+    {k:'budget_net_income',        l:'Net Income (Budget)',        color:'#11ABAB'},
   ]},
 ];
 
@@ -3745,10 +3744,13 @@ function renderPLCharts(){
         // Usar la misma cantidad de labels que ya establecio la linea primaria (evita
         // desalinear los datasets de las variantes con un cushion +4 independiente).
         const MAX_X = charts[i].data.labels.length;
-        const sliceV = (a)=>(a||[]).slice(0,LI+1).concat(new Array(Math.max(0,MAX_X-LI-1)).fill(null));
+        // Series de budget (prefijo 'budget_'): los meses 2025 vienen en 0 por diseño (no
+        // hay budget ese anio) -- se vuelven null para que no se dibuje una linea plana en
+        // cero (mismo criterio que renderRatioCharts arriba).
+        const sliceV = (a,isBudget)=>(a||[]).map((v,idx)=>(isBudget&&idx<12)?null:v).slice(0,LI+1).concat(new Array(Math.max(0,MAX_X-LI-1)).fill(null));
         ln.combined.slice(1).forEach(c=>{
           charts[i].data.datasets.push({
-            label: deent(c.l), data: sliceV(D[c.k]),
+            label: deent(c.l), data: sliceV(D[c.k], c.k.indexOf('budget_')===0),
             borderColor: c.color, backgroundColor:'transparent',
             borderDash:[6,4], fill:false, tension:0.32, borderWidth:2,
             pointRadius:2, pointBackgroundColor:c.color, pointBorderColor:c.color,
