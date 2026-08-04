@@ -912,7 +912,7 @@ footer.foot{margin-top:32px;padding-top:16px;border-top:1px solid var(--b);font-
 
 <footer class="foot">
   <div>VEMO · LTO (VEMO Impulso) · Strictly Private &amp; Confidential</div>
-  <div>build 2026-08-02 19:16</div>
+  <div>build 2026-08-03 20:04</div>
 </footer>
 
 <script>
@@ -3916,15 +3916,20 @@ function _mgrLineKey(k){
 
 // Lineas de "Metricas" (operacionales, no P&L) -- separadas del heatmap de P&L a pedido del
 // usuario, para no mezclar unidades/porcentajes de negocio con lineas de estado de resultados.
+// Mismas 10 metricas del Executive Summary (KPI13) y mismo criterio good/bad (better:'up'/
+// 'down' de KPI13 -> badWhenUp aqui), para no tener dos fuentes de verdad distintas de "que es
+// bueno/malo" para la misma metrica.
 const HEATMAP_METRICS_LINES=[
-  {k:'origination_total',l:'Origination (#)'},
-  {k:'net_portfolio_board',l:'Net Portfolio (Board)'},
-  {k:'collection_rate',l:'Collection Rate'},
-  {k:'bucket_61plus',l:'+61 Past Due'},
-  {k:'active_units',l:'Active Units'},
-  {k:'repossessed_units_eop',l:'Repossessed Units (EoP)'},
-  {k:'renewal_rate_board',l:'Renewal Rate (Board)'},
-  {k:'nim',l:'Net Interest Margin'},
+  {k:'vrpm_gross_portfolio_total',l:'Gross Portfolio (exc. WK & Other loans)'},
+  {k:'vrpm_active_fleet_total',l:'Portfolio Active Fleet'},
+  {k:'vrpm_orig_new_total',l:'Origination of New Vehicles (#)'},
+  {k:'orig_used_total',l:'Origination of Used Vehicles (#)'},
+  {k:'vrpm_asset_yield',l:'Portfolio Asset Yield (YTD)'},
+  {k:'vrpm_repo_total',l:'Effective Repossessions',badWhenUp:true},
+  {k:'vrpm_repo_pct',l:'Repossessions (% Total Fleet)',badWhenUp:true},
+  {k:'vrpm_uvi_total',l:'Used Vehicle Inventory',badWhenUp:true},
+  {k:'vrpm_uvi_pct',l:'Used Vehicle Inventory (% Total Fleet)',badWhenUp:true},
+  {k:'vrpm_default_rate',l:'Portfolio Default Rate',badWhenUp:true},
 ];
 // Lineas de P&L (mismo set/orden que PL_HIER) -- EBT y Net Income se resuelven siempre a su
 // variante Managerial via _mgrLineKey().
@@ -3959,9 +3964,22 @@ function _renderOneHeatmap(rootId, lines, title, fromIdx, toIdx, mode){
       else if(mode==='yoy'){ const yoy=+a[i-12]||0, cur=+a[i]||0; if(yoy) pct=(cur-yoy)/Math.abs(yoy)*100; }
       else if(mode==='bud'){ const b=barr(rk); const bv=+b[i]||0, cur=+a[i]||0; if(bv) pct=(cur-bv)/Math.abs(bv)*100; }
       else { const yY=(D.months[i]||'').split('-')[0]; let yS=0; for(let j=0;j<D.months.length;j++){ if(D.months[j]&&D.months[j].startsWith(yY+'-01')){ yS=j; break; } } const curYtd=sum(a,yS,i), prevYtd=sum(a,yS-12,i-12); if(prevYtd) pct=(curYtd-prevYtd)/Math.abs(prevYtd)*100; }
+      // Lineas 'invert' (costos/gastos guardados en negativo, ej. Interest Expense/COGS/Payroll/
+      // SG&A/D&A): el % crudo de arriba refleja el signo contable (mas negativo = crece el gasto),
+      // NO la direccion intuitiva "el gasto subio o bajo". Se invierte el signo aqui para que el
+      // texto lea "-X%" cuando el gasto REALMENTE bajo (mejora) y "+X%" cuando realmente subio.
+      if(ln.invert && pct!=null) pct = -pct;
       const txt=pct==null?'—':(pct>=0?'+':'')+pct.toFixed(0)+'%';
       let bg='#f0f0f0',color='#666';
-      if(pct!=null){ const intensity=Math.min(1,Math.abs(pct)/50); if(pct>=0){ bg='rgba(17,171,171,'+(0.1+intensity*0.55)+')'; color=intensity>0.5?'#fff':'#1F5454'; } else { bg='rgba(192,57,43,'+(0.1+intensity*0.55)+')'; color=intensity>0.5?'#fff':'#5a1a13'; } }
+      if(pct!=null){
+        const intensity=Math.min(1,Math.abs(pct)/50);
+        // Direccion "buena": por default subir es bueno (verde). badWhenUp (metricas donde subir
+        // es malo, ej. +61 Past Due, Repossessed Units, Additions) e invert (costos, con el signo
+        // ya corregido arriba) comparten la MISMA regla una vez normalizados: valor mostrado >=0
+        // es malo (rojo).
+        const bad = (ln.badWhenUp || ln.invert) ? (pct>=0) : (pct<0);
+        if(!bad){ bg='rgba(17,171,171,'+(0.1+intensity*0.55)+')'; color=intensity>0.5?'#fff':'#1F5454'; } else { bg='rgba(192,57,43,'+(0.1+intensity*0.55)+')'; color=intensity>0.5?'#fff':'#5a1a13'; }
+      }
       row+='<td style="background:'+bg+';color:'+color+'">'+txt+'</td>';
     }
     body+='<tr>'+row+'</tr>';
@@ -3979,11 +3997,25 @@ function renderHeatmap(fromIdx,toIdx,mode){
 
 function renderVariationTable(fromIdx,toIdx,mode){
   const tgt=document.getElementById('var-table');
+  // Mismas lineas y mismo orden que HEATMAP_PL_LINES (arriba), para que el heatmap y esta
+  // tabla siempre muestren el mismo set de P&L -- antes esta tabla tenia solo 8 de las 12
+  // lineas (faltaban Interest Income, Interest Expense, Other Operating Revenue, D&A).
+  // Sin flag 'invert': igual que el heatmap de P&L, el signo/color se lee tal cual viene del
+  // dato (sin voltear "gasto sube/baja") -- ya se probo que cualquier logica de inversion aqui
+  // termina confundiendo mas de lo que aclara.
   const lines=[
-    {k:'financial_margin',l:'Financial Margin'},{k:'adjusted_financial_margin',l:'Adj. Financial Margin'},
-    {k:'net_operating_revenue',l:'Net Operating Revenue'},{k:'cogs_total',l:'COGS',invert:true},
-    {k:'payroll_expense',l:'Payroll Expense',invert:true},{k:'total_sga',l:'SG&A',invert:true},
-    {k:'ebt',l:'EBT'},{k:'net_income',l:'Net Income'},
+    {k:'interest_income',l:'Interest Income'},
+    {k:'interest_expense',l:'Interest Expense'},
+    {k:'financial_margin',l:'Financial Margin'},
+    {k:'adjusted_financial_margin',l:'Adj. Financial Margin'},
+    {k:'other_operating_revenue',l:'Other Operating Revenue'},
+    {k:'net_operating_revenue',l:'Net Operating Revenue'},
+    {k:'cogs_total',l:'COGS'},
+    {k:'payroll_expense',l:'Payroll Expense'},
+    {k:'total_sga',l:'SG&A'},
+    {k:'da_total',l:'D&A'},
+    {k:'ebt',l:'EBT'},
+    {k:'net_income',l:'Net Income'},
   ];
   function variation(a,idx,lnK){
     if(mode==='mom') return [+a[idx]||0,+a[idx-1]||0];
@@ -4004,13 +4036,15 @@ function renderVariationTable(fromIdx,toIdx,mode){
     for(let i=fromIdx;i<=toIdx;i++){
       const r=variation(a,i,rk); const cur=r[0], ref=r[1];
       const d=cur-ref;
-      const isNeg=ln.invert?d>0:d<0;
+      // Sin invert: rojo si bajo, verde si subio -- igual convencion que el heatmap de P&L
+      // (arriba de este archivo), y ahora ambos coinciden.
+      const cls=d<0?'neg':(d>0?'pos':'');
       const pct=ref?(d/Math.abs(ref))*100:null;
       // FIX doble parens: usar valor absoluto para % cuando ya va dentro de paren externo
       // n.m. (no meaningful) para variaciones extremas (>300%/<-300%), mismo criterio que P&L.
       const pctNM = pct!=null && Math.abs(pct)>300;
       const pctStr = pctNM ? 'n.m.' : (pct!=null ? (Math.abs(pct).toFixed(0)+'%') : null);
-      row+='<td class="'+(isNeg?'neg':'')+'">'+fmtMm(d)+(pctStr?' <span style="font-size:9.5px;color:var(--tx3)">('+(!pctNM&&pct<0?'-':'')+pctStr+')</span>':'')+'</td>';
+      row+='<td class="'+cls+'">'+fmtMm(d)+(pctStr?' <span style="font-size:9.5px;color:var(--tx3)">('+(!pctNM&&pct<0?'-':'')+pctStr+')</span>':'')+'</td>';
     }
     body+='<tr>'+row+'</tr>';
   });
