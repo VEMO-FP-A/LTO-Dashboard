@@ -142,6 +142,16 @@ body.dark-mode .kpi-spark svg path[stroke="#1F5454"]{stroke:#9aa3ac!important}
 .vemo-tbl tbody tr.subtot td{background:#e6f5f4;font-weight:700;color:#1F5454;font-size:11.5px}
 .vemo-tbl tbody tr.exp td{font-weight:700;color:#1F5454}
 .vemo-tbl tbody tr.exp td.dev{font-weight:400}
+/* BUG REAL: ".tr.exp td" (2 clases + 3 selectores de tipo) le ganaba en especificidad CSS a
+   ".vemo-tbl tbody td.neg/.pos" (2 clases + 2 tipos) -- aunque .neg/.pos SI se aplicaban
+   correctamente en el HTML (clase correcta segun el signo crudo), el color quedaba pintado
+   siempre #1F5454 (el mismo teal oscuro de las filas .exp) en CUALQUIER fila expandible SIN
+   subtotal:true (LLR+RPSD, Other Operating Revenue, D&A) -- las filas con subtotal:true
+   (OPEX, SG&A) se salvaban porque su regla .subtot td.neg/.pos (3 clases) SI le ganaba a esta.
+   Fix: reforzar la especificidad para que .dev.neg/.dev.pos SIEMPRE se lean, sin importar si
+   la fila es .exp o no.*/
+.vemo-tbl tbody tr.exp td.dev.neg{color:#C0392B}
+.vemo-tbl tbody tr.exp td.dev.pos{color:#117A45}
 .vemo-tbl tbody tr.child td:not(.lbl){font-weight:400}
 .vemo-tbl tbody tr.subtot td.lbl{background:#11ABAB !important;color:#fff !important;font-weight:700;letter-spacing:0.01em;font-size:12px}
 .vemo-tbl tbody tr.subtot td.cur{background:#e6f5f4 !important}
@@ -414,6 +424,10 @@ body.dark-mode .vemo-tbl tbody td{color:#d4dae0!important;background:#22282d}
 body.dark-mode .vemo-tbl tbody tr:hover td{background:#2a3137}
 body.dark-mode .vemo-tbl tbody tr.subtot td{background:#2a3137!important;color:#7BDADA!important}
 body.dark-mode .vemo-tbl tbody tr.exp td{color:#7BDADA!important}
+/* Mismo bug de especificidad que en modo claro (ver comentario arriba de ".exp td.dev.neg"),
+   version dark-mode: reforzar con mas clases para que gane sobre .subtot/.exp td. */
+body.dark-mode .vemo-tbl tbody tr td.dev.neg{color:#ff7676!important}
+body.dark-mode .vemo-tbl tbody tr td.dev.pos{color:#5dd39e!important}
 body.dark-mode .vemo-tbl tbody tr.sep td{background:#353c42}
 body.dark-mode .vemo-tbl thead th{background:#1F5454!important;color:#fff!important;border-color:#353c42}
 body.dark-mode .vemo-tbl td.firstcol,body.dark-mode .vemo-tbl td.lbl{background:#22282d!important;color:#d4dae0!important}
@@ -908,7 +922,7 @@ footer.foot{margin-top:32px;padding-top:16px;border-top:1px solid var(--b);font-
 
 <footer class="foot">
   <div>VEMO · LTO (VEMO Impulso) · Strictly Private &amp; Confidential</div>
-  <div>build 2026-08-07 13:07</div>
+  <div>build 2026-08-07 13:19</div>
 </footer>
 
 <script>
