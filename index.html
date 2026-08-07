@@ -908,7 +908,7 @@ footer.foot{margin-top:32px;padding-top:16px;border-top:1px solid var(--b);font-
 
 <footer class="foot">
   <div>VEMO · LTO (VEMO Impulso) · Strictly Private &amp; Confidential</div>
-  <div>build 2026-08-07 12:44</div>
+  <div>build 2026-08-07 13:04</div>
 </footer>
 
 <script>
@@ -2623,9 +2623,25 @@ function renderRatioCharts(containerId, chartDefs){
         const card = ctx.closest('.chart-card');
         const showBud = card?.querySelector('[data-toggle="bud"]')?.classList.contains('active') ?? false;
         const showProj = card?.querySelector('[data-toggle="proj"]')?.classList.contains('active') ?? false;
-        const labels = D.months.map((_,j)=>mlblShort(j));
         const actualEntries = cd.combined.filter(c=>!c.k || c.k.indexOf('budget_')!==0);
         const budgetEntries = cd.combined.filter(c=>c.k && c.k.indexOf('budget_')===0);
+        // FIX: el eje X se quedaba fijo en los 24 meses completos sin importar los toggles --
+        // mismo criterio que ya usa makeLineChart: solo se extiende mas alla del ultimo mes
+        // actual (LI) si Budget esta prendido y tiene dato real futuro, o si Run-Rate esta
+        // prendido (proyecta hasta 3 meses adelante). Con ambos apagados, el eje se recorta al
+        // ultimo mes real.
+        let lastRealIdx = LI;
+        if(showBud){
+          budgetEntries.forEach(b=>{
+            const barr = D[b.k]||[];
+            for(let j=barr.length-1;j>LI;j--){ if(barr[j]!=null && barr[j]!==0){ lastRealIdx=Math.max(lastRealIdx,j); break; } }
+          });
+        }
+        if(showProj){
+          lastRealIdx = Math.max(lastRealIdx, Math.min(LI+3, D.months.length-1));
+        }
+        const MAX_X = Math.min(D.months.length, lastRealIdx+1);
+        const labels = D.months.slice(0, MAX_X).map((_,j)=>mlblShort(j));
         // Series de budget (prefijo 'budget_'): los meses 2025 vienen en 0 por diseño (no hay
         // budget ese anio) -- se vuelven null para que no se dibuje una linea plana en cero.
         // abs: algunas series (ej. Interest Expense) se guardan en negativo -- se grafican en
