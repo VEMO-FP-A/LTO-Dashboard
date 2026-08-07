@@ -908,7 +908,7 @@ footer.foot{margin-top:32px;padding-top:16px;border-top:1px solid var(--b);font-
 
 <footer class="foot">
   <div>VEMO · LTO (VEMO Impulso) · Strictly Private &amp; Confidential</div>
-  <div>build 2026-08-07 12:25</div>
+  <div>build 2026-08-07 12:44</div>
 </footer>
 
 <script>
@@ -2571,9 +2571,17 @@ function renderRatioCharts(containerId, chartDefs){
     if(cd.combined){
       // Sin resumen de valores en el header (quitado a pedido del usuario -- el chart ya
       // muestra Actual/Budget de cada serie via leyenda + tooltip al pasar el mouse, ese
-      // texto solo repetia la info y saturaba el header).
+      // texto solo repetia la info y saturaba el header). Toggles Budget/Run-Rate: mismo
+      // patron (boton) que ya usan los charts de 1 sola metrica, en vez de mostrar el Budget
+      // siempre fijo -- asi el usuario puede prender/apagar cada serie igual que en cualquier
+      // otro chart del dashboard.
+      const hasBudCombo = cd.combined.some(c=>c.k && c.k.indexOf('budget_')===0);
       html += '<div class="chart-card" style="grid-column:1 / -1">'+
-        '<div class="chart-hd"><span class="t">'+cd.l+'</span></div>'+
+        '<div class="chart-hd"><span class="t">'+cd.l+'</span>'+
+        '<div class="chart-toggles"><div class="tgl-group">'+
+          (hasBudCombo ? '<button type="button" class="tgl-btn active" data-toggle="bud" data-card="'+containerId+'-c'+i+'">Budget</button>' : '')+
+          '<button type="button" class="tgl-btn" data-toggle="proj" data-card="'+containerId+'-c'+i+'">Run-Rate</button>'+
+        '</div></div></div>'+
         '<div class="chart-body" style="height:280px"><canvas id="'+containerId+'-c'+i+'"></canvas></div></div>';
       return;
     }
@@ -2604,29 +2612,66 @@ function renderRatioCharts(containerId, chartDefs){
   function buildChart(cd, i){
     try {
       if(cd.combined){
-        // Combined chart: multiple datasets en un canvas
+        // Combined chart: multiple datasets en un canvas. Toggles Budget/Run-Rate (leidos del
+        // header, mismo patron que el resto de charts): Budget prendido/apagado controla TODAS
+        // las series budget_* del combo a la vez; Run-Rate agrega una proyeccion propia POR
+        // CADA linea actual (no solo la primera), usando runRateProjection() (definida arriba,
+        // junto a makeLineChart).
         const canvasId = containerId+'-c'+i;
         const ctx = document.getElementById(canvasId);
         if(!ctx) return;
+        const card = ctx.closest('.chart-card');
+        const showBud = card?.querySelector('[data-toggle="bud"]')?.classList.contains('active') ?? false;
+        const showProj = card?.querySelector('[data-toggle="proj"]')?.classList.contains('active') ?? false;
         const labels = D.months.map((_,j)=>mlblShort(j));
-        const datasets = cd.combined.map(c => {
-          // Series de budget (prefijo 'budget_'): los meses 2025 vienen en 0 por diseño (no hay
-          // budget ese anio) -- se vuelven null para que no se dibuje una linea plana en cero.
-          // abs: algunas series (ej. Interest Expense) se guardan en negativo -- se grafican en
-          // valor absoluto sin nota aclaratoria, mismo criterio que en el tab de P&L Charts.
+        const actualEntries = cd.combined.filter(c=>!c.k || c.k.indexOf('budget_')!==0);
+        const budgetEntries = cd.combined.filter(c=>c.k && c.k.indexOf('budget_')===0);
+        // Series de budget (prefijo 'budget_'): los meses 2025 vienen en 0 por diseño (no hay
+        // budget ese anio) -- se vuelven null para que no se dibuje una linea plana en cero.
+        // abs: algunas series (ej. Interest Expense) se guardan en negativo -- se grafican en
+        // valor absoluto sin nota aclaratoria, mismo criterio que en el tab de P&L Charts.
+        function seriesData(c, isBudgetFlag){
           const raw = (D[c.k]||[]).map((v,idx)=> {
-            if(c.k.indexOf('budget_')===0 && idx<12) return null;
+            if(isBudgetFlag && idx<12) return null;
             return (c.abs && v!=null) ? Math.abs(v) : v;
           });
-          const arr = raw.slice(0, LI+1).concat(new Array(Math.max(0, labels.length-LI-1)).fill(null));
-          return {
-            label: deent(c.l), data: arr,
+          // Budget: no truncar en el mes actual -- suele cubrir el año completo (mismo criterio
+          // que los charts de 1 sola metrica, que dejan el Budget dashed correr hasta Dic).
+          // Actual: se trunca en LI (no hay dato real futuro sin Run-Rate).
+          return isBudgetFlag ? raw.slice(0, labels.length) : raw.slice(0, LI+1).concat(new Array(Math.max(0, labels.length-LI-1)).fill(null));
+        }
+        const datasets = [];
+        actualEntries.forEach(c=>{
+          const arrData = seriesData(c, false);
+          datasets.push({
+            label: deent(c.l), data: arrData,
             borderColor: c.color, backgroundColor: c.color+'33',
-            fill:false, tension:0.32, borderWidth: c.dash?2:2.5,
-            borderDash: c.dash ? [6,4] : [],
-            pointRadius: c.dash?0:2.5, pointBackgroundColor:c.color, pointBorderColor:c.color,
-            pointHoverRadius: c.dash?3:5
-          };
+            fill:false, tension:0.32, borderWidth:2.5, borderDash:[],
+            pointRadius:2.5, pointBackgroundColor:c.color, pointBorderColor:c.color,
+            pointHoverRadius:5
+          });
+          if(showBud){
+            const bEntry = budgetEntries.find(b=>b.k==='budget_'+c.k);
+            if(bEntry){
+              datasets.push({
+                label: deent(bEntry.l), data: seriesData(bEntry, true),
+                borderColor: bEntry.color, backgroundColor: bEntry.color+'33',
+                fill:false, tension:0.32, borderWidth:2, borderDash:[6,4],
+                pointRadius:0, pointBackgroundColor:bEntry.color, pointBorderColor:bEntry.color,
+                pointHoverRadius:3
+              });
+            }
+          }
+          if(showProj){
+            const proj = runRateProjection(arrData, labels.length, false);
+            if(proj) datasets.push({
+              label:'Run-Rate ('+deent(c.l)+')', data:proj,
+              borderColor:c.color, backgroundColor:'transparent',
+              fill:false, tension:0.32, borderWidth:1.5, borderDash:[3,3],
+              pointRadius:2, pointBackgroundColor:c.color, pointBorderColor:c.color,
+              pointHoverRadius:4
+            });
+          }
         });
         if(ratioCharts[i]) ratioCharts[i].destroy();
         ratioCharts[i] = new Chart(ctx, {
@@ -3174,6 +3219,26 @@ function smartYRange(series, mode){
   // Sanity: si min === max, expandir
   if(niceMin >= niceMax) return {min: niceMin - step, max: niceMax + step};
   return {min: niceMin, max: niceMax};
+}
+
+// Run-Rate: mismo algoritmo que ya usa makeLineChart mas abajo (promedio de los deltas mes a
+// mes de los ultimos meses reales -- hasta 3 -- extrapolado hacia adelante, anclado en el
+// ultimo mes real) -- extraido a funcion compartida para poder reutilizarlo en charts
+// 'combined' (multiples lineas en un solo canvas: ej. Interest Income vs Interest Expense),
+// donde CADA linea actual necesita su propia proyeccion, no solo la primaria.
+function runRateProjection(mainArr, MAX_X, isPct){
+  if(!mainArr || mainArr.slice(0, LI+1).filter(v=>v!=null).length < 3) return null;
+  const proj = new Array(MAX_X).fill(null);
+  if(LI < MAX_X) proj[LI] = mainArr[LI];
+  const actualsOnly = mainArr.slice(0, LI+1).filter(v=>v!=null);
+  const lastPts = actualsOnly.slice(-4);
+  const deltas = [];
+  for(let i=1;i<lastPts.length;i++) deltas.push(lastPts[i]-lastPts[i-1]);
+  let avgDelta = deltas.length ? deltas.reduce((a,b)=>a+b,0)/deltas.length : 0;
+  if(!isPct && avgDelta < 0) avgDelta = 0;
+  let cur = mainArr[LI];
+  for(let i=LI+1;i<Math.min(LI+4,MAX_X);i++){ cur = cur + avgDelta; proj[i]=cur; }
+  return proj;
 }
 
 function makeLineChart(canvasId,label,data,opts){
@@ -3760,13 +3825,16 @@ function renderPLCharts(){
   let html='';
   PL_LINES.forEach((ln,i)=>{
     if(ln.combined){
-      const stats = ln.combined.map(c => {
-        const A = D[c.k]||[]; let v = sum(A, CUR, CUR);
-        if(c.abs) v = Math.abs(v);
-        return c.l+': '+fmtCompact(v,1);
-      }).join(' · ');
+      // Sin resumen de valores en el header (quitado a pedido del usuario -- saturaba el
+      // header y ya se ve via leyenda + tooltip). Toggles Budget/Run-Rate: mismo boton que
+      // usan los charts de 1 sola metrica, en vez de mostrar el Budget siempre fijo.
+      const hasBudCombo = ln.combined.some(c=>c.k && c.k.indexOf('budget_')===0);
       html+='<div class="chart-card" style="grid-column:1 / -1">'+
-        '<div class="chart-hd"><span class="t">'+ln.l+'</span><span class="stats">'+stats+'</span></div>'+
+        '<div class="chart-hd"><span class="t">'+ln.l+'</span>'+
+        '<div class="chart-toggles"><div class="tgl-group">'+
+          (hasBudCombo ? '<button type="button" class="tgl-btn active" data-toggle="bud" data-idx="'+i+'">Budget</button>' : '')+
+          '<button type="button" class="tgl-btn" data-toggle="proj" data-idx="'+i+'">Run-Rate</button>'+
+        '</div></div></div>'+
         '<div class="chart-body" style="height:280px"><canvas id="plc-'+i+'"></canvas></div></div>';
       return;
     }
@@ -3791,36 +3859,83 @@ function renderPLCharts(){
       const canvasId='plc-'+i;
       if(!document.getElementById(canvasId)) return;
       if(charts[i]) charts[i].destroy();
+      // Toggles Budget/Run-Rate leidos del header (mismo patron que el resto de charts, en vez
+      // de mostrar Budget siempre fijo). Run-Rate agrega su propia proyeccion POR CADA linea
+      // actual del combo (ej. tanto Interest Income como Interest Expense), no solo la primaria.
+      const cardEl=root.querySelectorAll('.chart-card')[i];
+      const showBud=cardEl?.querySelector('[data-toggle="bud"]')?.classList.contains('active') ?? false;
+      const showProj=cardEl?.querySelector('[data-toggle="proj"]')?.classList.contains('active') ?? false;
+      const actualEntries = ln.combined.filter(c=>!c.k || c.k.indexOf('budget_')!==0);
+      const budgetEntries = ln.combined.filter(c=>c.k && c.k.indexOf('budget_')===0);
       // Estilo consistente con makeLineChart: linea principal solida con relleno teal,
       // tooltip oscuro, eje Y con formato "$xx.x / (xx.x)" — las variantes van en tonos
       // teal mas oscuro/claro (dashed) para diferenciarse sin salir de la paleta.
-      const primary = ln.combined[0];
+      const primary = actualEntries[0];
       // abs: algunas series (ej. Interest Expense) se guardan en negativo -- para graficarlas
       // en valor absoluto sin tocar el dato original (sin flag de "invertido" ni nota
       // aclaratoria, a pedido del usuario) se aplica Math.abs solo al dibujar.
       const primaryData = (D[primary.k]||[]).map(v=>(primary.abs && v!=null) ? Math.abs(v) : v);
-      charts[i] = makeLineChart(canvasId, primary.l, primaryData, { yfmt:v=>fmtMm(v) });
+      const primaryBudEntry = budgetEntries.find(b=>b.k==='budget_'+primary.k);
+      const primaryBudData = (showBud && primaryBudEntry) ? (D[primaryBudEntry.k]||[]).map(v=>(primaryBudEntry.abs && v!=null) ? Math.abs(v) : v) : null;
+      charts[i] = makeLineChart(canvasId, primary.l, primaryData, { yfmt:v=>fmtMm(v), budget: primaryBudData, projection: showProj });
       if(charts[i]){
+        // makeLineChart pone labels genericos "Budget"/"Run-Rate" para la linea primaria --
+        // renombrarlos para que la leyenda diga a que serie pertenecen, igual que el resto.
+        charts[i].data.datasets.forEach(ds=>{
+          if(ds.label==='Budget' && primaryBudEntry) ds.label = deent(primaryBudEntry.l);
+          if(ds.label==='Run-Rate') ds.label = 'Run-Rate ('+deent(primary.l)+')';
+        });
         // Usar la misma cantidad de labels que ya establecio la linea primaria (evita
         // desalinear los datasets de las variantes con un cushion +4 independiente).
         const MAX_X = charts[i].data.labels.length;
         // Series de budget (prefijo 'budget_'): los meses 2025 vienen en 0 por diseño (no
         // hay budget ese anio) -- se vuelven null para que no se dibuje una linea plana en
         // cero (mismo criterio que renderRatioCharts arriba).
-        const sliceV = (a,isBudget)=>(a||[]).map((v,idx)=>(isBudget&&idx<12)?null:v).slice(0,LI+1).concat(new Array(Math.max(0,MAX_X-LI-1)).fill(null));
-        ln.combined.slice(1).forEach(c=>{
-          const data = sliceV(D[c.k], c.k.indexOf('budget_')===0).map(v=>(c.abs && v!=null) ? Math.abs(v) : v);
+        // Budget: NO truncar en el mes actual (LI) -- el presupuesto suele cubrir el año
+        // completo, y la linea primaria (via makeLineChart arriba) ya se extiende hasta el
+        // ultimo mes con Budget real. Truncar aqui la dejaria mas corta que esa, viendose
+        // inconsistente en el mismo chart. Actual: se sigue truncando en LI (no hay dato real
+        // futuro sin Run-Rate).
+        const sliceV = (a,isBudget)=>{
+          const raw=(a||[]).map((v,idx)=>(isBudget&&idx<12)?null:v);
+          return isBudget ? raw.slice(0,MAX_X) : raw.slice(0,LI+1).concat(new Array(Math.max(0,MAX_X-LI-1)).fill(null));
+        };
+        actualEntries.slice(1).forEach(c=>{
+          const data = sliceV(D[c.k], false).map(v=>(c.abs && v!=null) ? Math.abs(v) : v);
           charts[i].data.datasets.push({
             label: deent(c.l), data: data,
             borderColor: c.color, backgroundColor:'transparent',
-            borderDash:[6,4], fill:false, tension:0.32, borderWidth:2,
+            fill:false, tension:0.32, borderWidth:2, borderDash:[],
             pointRadius:2, pointBackgroundColor:c.color, pointBorderColor:c.color,
             pointHoverRadius:5
           });
+          if(showBud){
+            const bEntry = budgetEntries.find(b=>b.k==='budget_'+c.k);
+            if(bEntry){
+              const bdata = sliceV(D[bEntry.k], true).map(v=>(bEntry.abs && v!=null) ? Math.abs(v) : v);
+              charts[i].data.datasets.push({
+                label: deent(bEntry.l), data: bdata,
+                borderColor: bEntry.color, backgroundColor:'transparent',
+                borderDash:[6,4], fill:false, tension:0.32, borderWidth:2,
+                pointRadius:2, pointBackgroundColor:bEntry.color, pointBorderColor:bEntry.color,
+                pointHoverRadius:5
+              });
+            }
+          }
+          if(showProj){
+            const proj = runRateProjection(data, MAX_X, false);
+            if(proj) charts[i].data.datasets.push({
+              label:'Run-Rate ('+deent(c.l)+')', data:proj,
+              borderColor:c.color, backgroundColor:'transparent',
+              borderDash:[3,3], fill:false, tension:0.32, borderWidth:1.5,
+              pointRadius:2, pointBackgroundColor:c.color, pointBorderColor:c.color,
+              pointHoverRadius:4
+            });
+          }
         });
         charts[i].options.plugins.legend.display = true;
-        // Re-calcular el rango del eje Y considerando las 3 series (no solo la principal) —
-        // los "Ex." variants a veces superan a Net Income en algunos meses.
+        // Re-calcular el rango del eje Y considerando todas las series visibles (no solo la
+        // principal) — los "Ex." variants a veces superan a Net Income en algunos meses.
         const combinedForRange = [].concat(...charts[i].data.datasets.map(ds=>ds.data));
         const yr2 = smartYRange(combinedForRange, null);
         charts[i].options.scales.y.min = yr2.min;
