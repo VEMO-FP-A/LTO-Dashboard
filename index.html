@@ -922,7 +922,7 @@ footer.foot{margin-top:32px;padding-top:16px;border-top:1px solid var(--b);font-
 
 <footer class="foot">
   <div>VEMO · LTO (VEMO Impulso) · Strictly Private &amp; Confidential</div>
-  <div>build 2026-08-10 15:44</div>
+  <div>build 2026-08-10 15:51</div>
 </footer>
 
 <script>
@@ -4247,7 +4247,7 @@ function renderVariationTable(fromIdx,toIdx,mode){
     let yS=0; for(let j=0;j<D.months.length;j++){ if(D.months[j]&&D.months[j].startsWith(yY+'-01')){ yS=j; break; } }
     return [sum(a,yS,idx),sum(a,yS-12,idx-12)];
   }
-  let header='<th class="firstcol" style="text-align:left">Linea</th>';
+  let header='<th class="firstcol" style="text-align:left">Line</th>';
   for(let i=fromIdx;i<=toIdx;i++) header+='<th>'+mlblShort(i)+'</th>';
   let body='';
   lines.forEach(ln=>{
@@ -4258,19 +4258,24 @@ function renderVariationTable(fromIdx,toIdx,mode){
     for(let i=fromIdx;i<=toIdx;i++){
       const r=variation(a,i,rk); const cur=r[0], ref=r[1];
       const d=cur-ref;
-      // Sin invert: rojo si bajo, verde si subio -- igual convencion que el heatmap de P&L
-      // (arriba de este archivo), y ahora ambos coinciden.
+      // Color = impacto de negocio (signo natural de d, sin invert): d>0 favorable=verde,
+      // d<0 desfavorable=rojo, d==0 sin color. Igual convencion que el heatmap de P&L.
       const cls=d<0?'neg':(d>0?'pos':'');
+      // Flecha = direccion de TAMANO (magnitud), NO de impacto -- por eso "gasto mas" puede
+      // mostrar ▲ (la linea crecio en magnitud) coloreado en rojo (desfavorable) a la vez.
+      const magChange = Math.abs(cur) - Math.abs(ref);
+      const arrow = magChange>0 ? '▲ ' : (magChange<0 ? '▼ ' : '');
       const pct=ref?(d/Math.abs(ref))*100:null;
-      // FIX doble parens: usar valor absoluto para % cuando ya va dentro de paren externo
-      // n.m. (no meaningful) para variaciones extremas (>300%/<-300%), mismo criterio que P&L.
+      // n.m. (no meaningful) para variaciones extremas (>300% en absoluto), mismo criterio que P&L.
       const pctNM = pct!=null && Math.abs(pct)>300;
       const pctStr = pctNM ? 'n.m.' : (pct!=null ? (Math.abs(pct).toFixed(0)+'%') : null);
-      row+='<td class="'+cls+'">'+fmtMm(d)+(pctStr?' <span style="font-size:9.5px;color:var(--tx3)">('+(!pctNM&&pct<0?'-':'')+pctStr+')</span>':'')+'</td>';
+      // Monto y % siempre en magnitud (valor absoluto) -- nunca negativo ni entre parentesis.
+      row+='<td class="'+cls+'">'+arrow+fmtMm(Math.abs(d))+(pctStr?' <span style="font-size:9.5px;color:var(--tx3)">('+pctStr+')</span>':'')+'</td>';
     }
     body+='<tr>'+row+'</tr>';
   });
   tgt.innerHTML='<div class="vemo-section-title" style="font-size:18px">Variation table — '+(mode==='mom'?'MoM':(mode==='yoy'?'YoY':'YTD'))+'</div>'+
+    '<div style="font-size:10.5px;color:var(--tx3);font-style:italic;margin:-4px 2px 8px 2px">▲ line up · ▼ line down (in size). Color = business impact: green favorable (more revenue or less expense), red unfavorable. Amounts &amp; % shown as magnitude.</div>'+
     '<div class="tbl-scroll"><table class="vemo-tbl"><thead><tr class="sub">'+header+'</tr></thead><tbody>'+body+'</tbody></table></div>';
 }
 
