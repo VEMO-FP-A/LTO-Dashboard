@@ -232,6 +232,8 @@ body.dark-mode .tgl-btn.active{background:#fff;color:#1F5454}
 .opmet-hd{background:var(--forest);color:#fff;padding:11px 18px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px}
 .opmet-hd .t{font-size:14px;font-weight:700;letter-spacing:0.01em}
 .opmet-hd .hint{font-size:10.5px;color:rgba(255,255,255,0.78);letter-spacing:0.03em}
+.opmet-expand-btn{background:transparent;border:1.5px solid rgba(255,255,255,0.55);color:#fff;font-family:'Space Grotesk',sans-serif;font-size:11px;font-weight:700;padding:6px 14px;border-radius:6px;cursor:pointer;transition:background 0.15s,border-color 0.15s;white-space:nowrap;margin-left:auto}
+.opmet-expand-btn:hover{background:rgba(255,255,255,0.14);border-color:rgba(255,255,255,0.9)}
 .opmet-row{border-bottom:1px solid var(--b);transition:background 0.12s;background:#fff}
 .opmet-row:last-child{border-bottom:none}
 .opmet-row .hd{display:flex;align-items:center;gap:14px;padding:13px 18px;cursor:pointer;user-select:none}
@@ -766,7 +768,7 @@ footer.foot{margin-top:32px;padding-top:16px;border-top:1px solid var(--b);font-
   <div class="header">
     <div>
       <div class="title">LTO — <b>Executive Summary</b></div>
-      <div class="subtitle">Full history · Lease-to-Own Financing · Financial &amp; Operational  ·  <span id="data-through-label" style="color:var(--teal);font-weight:700"></span></div>
+      <div class="subtitle">Lease-to-Own Financing · Financial &amp; Operational  ·  <span id="data-through-label" style="color:var(--teal);font-weight:700"></span></div>
     </div>
     <div class="brand">
       <div class="vemo-logo-wrap">
@@ -874,7 +876,7 @@ footer.foot{margin-top:32px;padding-top:16px;border-top:1px solid var(--b);font-
     </div>
     <label style="display:flex;align-items:center;gap:8px;font-family:'Space Grotesk',sans-serif;font-size:13px;color:var(--forest);font-weight:600;cursor:pointer">
       <input type="checkbox" id="pl-historic-toggle" style="width:18px;height:18px;accent-color:var(--teal);cursor:pointer" />
-      <span>📊 <b>Historical View</b></span>
+      <span>📊 <b id="pl-historic-range-lbl">Historical View</b></span>
     </label>
     <span id="pl-view-caption" style="margin-left:auto;font-size:11px;color:var(--tx3);letter-spacing:0.03em">View: <b>Managerial View</b></span>
   </div>
@@ -909,7 +911,7 @@ footer.foot{margin-top:32px;padding-top:16px;border-top:1px solid var(--b);font-
 
 <footer class="foot">
   <div>VEMO · LTO (VEMO Impulso) · Strictly Private &amp; Confidential</div>
-  <div>build 2026-08-24 15:17</div>
+  <div>build 2026-08-25 12:50</div>
 </footer>
 
 <script>
@@ -2001,7 +2003,8 @@ function renderRatioExpandable(targetId, list, sectionTitle){
   const RS = rangeStart(), RE = rangeEnd();
   let html = sectionTitle ? ('<div class="vemo-section-title">'+sectionTitle+'</div>') : '';
   const hint = mlblShort(RS)+' → '+mlblShort(RE)+' · '+(KPI_RANGE==='ytd'?'YTD '+CURY:'Full history')+' · click section to expand';
-  html += '<div class="opmet-wrap"><div class="opmet-hd"><span class="t">Operational Metrics Table</span><span class="hint">'+hint+'</span></div>';
+  html += '<div class="opmet-wrap"><div class="opmet-hd"><span class="t">Operational Metrics Table</span><span class="hint">'+hint+'</span>'+
+    '<button type="button" class="opmet-expand-btn" data-role="opmet-expand-all">Expand all</button></div>';
   list.forEach((ki, idx)=>{
     let A = [], B = [];
     if(ki.computed && ki.numer && ki.denom){
@@ -2145,6 +2148,20 @@ function renderRatioExpandable(targetId, list, sectionTitle){
   tgt.querySelectorAll('.opmet-row .hd').forEach(hd=>{
     hd.addEventListener('click',()=>hd.parentElement.classList.toggle('open'));
   });
+  // "Expand all" (Ago 2026, a pedido del usuario): boton en el header de CADA tabla de este
+  // formato, que expande/colapsa TODAS las filas .opmet-row de ESE wrap especifico (busca el
+  // .opmet-wrap ancestro del boton, no todas las tablas de la pagina). Toggle inteligente: si
+  // alguna fila esta cerrada, el click las abre todas y el boton pasa a decir "Collapse all";
+  // si ya estan todas abiertas, el click las cierra todas y el boton vuelve a "Expand all".
+  tgt.querySelectorAll('[data-role="opmet-expand-all"]').forEach(btn=>{
+    btn.addEventListener('click',()=>{
+      const wrap = btn.closest('.opmet-wrap'); if(!wrap) return;
+      const rows = wrap.querySelectorAll('.opmet-row');
+      const willExpand = Array.from(rows).some(r=>!r.classList.contains('open'));
+      rows.forEach(r=>r.classList.toggle('open', willExpand));
+      btn.textContent = willExpand ? 'Collapse all' : 'Expand all';
+    });
+  });
 }
 
 // FORMATO 'grouped': un solo concepto (ej. Gross Portfolio) con su desglose Technology/Platform/City
@@ -2154,7 +2171,8 @@ function renderGroupedExpandable(targetId, groups, sectionTitle){
   const RS = rangeStart(), RE = rangeEnd();
   let html = sectionTitle ? ('<div class="vemo-section-title">'+sectionTitle+'</div>') : '';
   const hint = mlblShort(RS)+' → '+mlblShort(RE)+' · '+(KPI_RANGE==='ytd'?'YTD '+CURY:'Full history')+' · click section to expand';
-  html += '<div class="opmet-wrap"><div class="opmet-hd"><span class="t">Operational Metrics Table</span><span class="hint">'+hint+'</span></div>';
+  html += '<div class="opmet-wrap"><div class="opmet-hd"><span class="t">Operational Metrics Table</span><span class="hint">'+hint+'</span>'+
+    '<button type="button" class="opmet-expand-btn" data-role="opmet-expand-all">Expand all</button></div>';
 
   function getV(arrIn, i, ki){
     if(ki.agg==='eop') return eop(arrIn, i);
@@ -2283,6 +2301,17 @@ function renderGroupedExpandable(targetId, groups, sectionTitle){
   tgt.insertAdjacentHTML('beforeend', html);
   tgt.querySelectorAll('.opmet-row .hd').forEach(hd=>{
     hd.addEventListener('click',()=>hd.parentElement.classList.toggle('open'));
+  });
+  // "Expand all" (Ago 2026) -- mismo criterio que renderRatioExpandable arriba: escopeado al
+  // .opmet-wrap ancestro del boton, toggle inteligente Expand/Collapse.
+  tgt.querySelectorAll('[data-role="opmet-expand-all"]').forEach(btn=>{
+    btn.addEventListener('click',()=>{
+      const wrap = btn.closest('.opmet-wrap'); if(!wrap) return;
+      const rows = wrap.querySelectorAll('.opmet-row');
+      const willExpand = Array.from(rows).some(r=>!r.classList.contains('open'));
+      rows.forEach(r=>r.classList.toggle('open', willExpand));
+      btn.textContent = willExpand ? 'Collapse all' : 'Expand all';
+    });
   });
 }
 
@@ -3092,17 +3121,23 @@ const RATIO_CHARTS = {
   // Un chart por cada uno de los 9 Main KPIs (KPI13) -- mismas keys/agg que la tabla de abajo,
   // para que los charts de arriba y la tabla numerica de abajo muestren exactamente las mismas
   // 9 metricas (antes solo habia 5 charts, y ademas usaban metricas distintas a KPI13).
+  // capToActual:true en las 10 (Ago 2026, a pedido del usuario): sin esto, con Budget prendido
+  // (activo por default) el eje se estiraba hasta Dic-26 para caber el Budget completo, dejando
+  // la mitad derecha del chart vacia (solo la linea punteada de Budget, sin relleno) en vez de
+  // verse "de lado a lado". Con capToActual, el Budget se sigue dibujando pero solo hasta donde
+  // ya hay Actual real -- mismo criterio que ya usaba el chart de Gross Portfolio en
+  // main_portfolio (ver comentario de la funcion makeLineChart).
   main: [
-    {keys:['vrpm_gross_portfolio_total'], l:'Gross Portfolio (exc. WK &amp; Other loans)', agg:'eop', fmt:'k'},
-    {keys:['vrpm_active_fleet_total'], l:'Portfolio Active Fleet', agg:'eop', fmt:'int'},
-    {keys:['vrpm_orig_new_total'], l:'Origination of New Vehicles (#)', agg:'sum', fmt:'int'},
-    {keys:['orig_used_total'], l:'Origination of Used Vehicles (#)', agg:'sum', fmt:'int'},
-    {keys:['vrpm_asset_yield'], l:'Portfolio Asset Yield (YTD)', type:'pct', agg:'avg'},
-    {keys:['vrpm_repo_total'], l:'Effective Repossessions', agg:'sum', fmt:'int'},
-    {keys:['vrpm_repo_pct'], l:'Repossessions (% Total Fleet)', type:'pct', agg:'avg'},
-    {keys:['vrpm_uvi_total'], l:'Used Vehicle Inventory', agg:'eop', fmt:'int'},
-    {keys:['vrpm_uvi_pct'], l:'Used Vehicle Inventory (% Total Fleet)', type:'pct', agg:'avg'},
-    {keys:['vrpm_default_rate'], l:'Portfolio Default Rate', type:'pct', agg:'eop'},
+    {keys:['vrpm_gross_portfolio_total'], l:'Gross Portfolio (exc. WK &amp; Other loans)', agg:'eop', fmt:'k', capToActual:true},
+    {keys:['vrpm_active_fleet_total'], l:'Portfolio Active Fleet', agg:'eop', fmt:'int', capToActual:true},
+    {keys:['vrpm_orig_new_total'], l:'Origination of New Vehicles (#)', agg:'sum', fmt:'int', capToActual:true},
+    {keys:['orig_used_total'], l:'Origination of Used Vehicles (#)', agg:'sum', fmt:'int', capToActual:true},
+    {keys:['vrpm_asset_yield'], l:'Portfolio Asset Yield (YTD)', type:'pct', agg:'avg', capToActual:true},
+    {keys:['vrpm_repo_total'], l:'Effective Repossessions', agg:'sum', fmt:'int', capToActual:true},
+    {keys:['vrpm_repo_pct'], l:'Repossessions (% Total Fleet)', type:'pct', agg:'avg', capToActual:true},
+    {keys:['vrpm_uvi_total'], l:'Used Vehicle Inventory', agg:'eop', fmt:'int', capToActual:true},
+    {keys:['vrpm_uvi_pct'], l:'Used Vehicle Inventory (% Total Fleet)', type:'pct', agg:'avg', capToActual:true},
+    {keys:['vrpm_default_rate'], l:'Portfolio Default Rate', type:'pct', agg:'eop', capToActual:true},
   ],
   // Solo Gross Portfolio (Total) aqui -- coherente con la tabla de abajo (GROUPS.main_portfolio),
   // que cubre exclusivamente Gross Portfolio / Active Fleet / Days Past Due. Los desgloses por
@@ -6921,6 +6956,17 @@ function setupChat(){
         PL_SHOW_HISTORIC = t.checked;
         try { renderPLVemo('pl-vemo-detail',{simple:false,title:'LTO – <b>P&L Summary</b>'}); } catch(e){ console.warn(e); }
       });
+    }
+    // FIX (Ago 2026): el label decia "Historical View" a secas, sin decir que rango cubre --
+    // se reemplaza por el rango real de anios con datos (ej. "2025-2026"), calculado del
+    // arreglo D.months en vez de hardcodearlo, para que se actualice solo si en el futuro se
+    // agrega un anio mas (ej. "2025-2027") sin tener que tocar este texto de nuevo.
+    const lbl = document.getElementById('pl-historic-range-lbl');
+    if(lbl && D.months && D.months.length){
+      const firstY = (D.months[0]||'').split('-')[0];
+      const lastIdx = Math.min(LI, D.months.length-1);
+      const lastY = (D.months[lastIdx]||'').split('-')[0];
+      if(firstY && lastY) lbl.textContent = (firstY===lastY) ? firstY : (firstY+'-'+lastY);
     }
   }
   if(document.readyState==='loading') document.addEventListener('DOMContentLoaded', bind);
